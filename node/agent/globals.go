@@ -53,6 +53,7 @@ type MeshConfig struct {
 	MinPeers           int                  `json:"min_peers"`
 	AuthoritativePeers []string             `json:"authoritative_peers"`
 	TrustedNetworks    []TrustedMeshNetwork `json:"trusted_networks"`
+	RevokedPeerCerts   []string             `json:"revoked_peer_certs,omitempty"`
 }
 
 type MeshTLSConfig struct {

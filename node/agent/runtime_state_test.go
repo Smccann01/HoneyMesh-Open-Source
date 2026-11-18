@@ -30,6 +30,7 @@ func TestRuntimeStatePersistsMutableFieldsWithoutEditingOperatorConfig(t *testin
 	config.AdminToken = "synthetic-token"
 	config.Security.ScanPorts = 25
 	config.Mesh.Peers = []string{"peer.example:9000"}
+	config.Mesh.RevokedPeerCerts = []string{"synthetic-fingerprint"}
 	config.Exchange.NodeID = "synthetic-node"
 	if !saveConfig() {
 		t.Fatal("save runtime state")
@@ -50,7 +51,7 @@ func TestRuntimeStatePersistsMutableFieldsWithoutEditingOperatorConfig(t *testin
 	}
 	config = Config{}
 	loadConfig()
-	if config.AdminToken != "synthetic-token" || config.Security.ScanPorts != 25 || len(config.Mesh.Peers) != 1 || config.Exchange.NodeID != "synthetic-node" {
+	if config.AdminToken != "synthetic-token" || config.Security.ScanPorts != 25 || len(config.Mesh.Peers) != 1 || len(config.Mesh.RevokedPeerCerts) != 1 || config.Mesh.RevokedPeerCerts[0] != "synthetic-fingerprint" || config.Exchange.NodeID != "synthetic-node" {
 		t.Fatalf("runtime state did not persist: %#v", config)
 	}
 	if config.NodeName != "operator-node" || config.Security.CertFile != filepath.Join(root, "certs/node.crt") || config.Mesh.TLS.PeerCAFile != filepath.Join(root, "certs/peer-ca.crt") {
@@ -59,6 +60,8 @@ func TestRuntimeStatePersistsMutableFieldsWithoutEditingOperatorConfig(t *testin
 	operator.Ifaces = []string{"eth-test"}
 	operator.Traps = map[string]*TrapState{"2222": {Enabled: true}}
 	operator.Security.ScanPorts = 31
+	operator.TrustedMeshNetworkEnabled = true
+	operator.TrustedNetworkSharingEnabled = true
 	updated, err := json.Marshal(operator)
 	if err != nil {
 		t.Fatal(err)
@@ -68,7 +71,24 @@ func TestRuntimeStatePersistsMutableFieldsWithoutEditingOperatorConfig(t *testin
 	}
 	config = Config{}
 	loadConfig()
-	if len(config.Ifaces) != 1 || config.Ifaces[0] != "eth-test" || !config.Traps["2222"].Enabled || config.Security.ScanPorts != 31 || config.AdminToken != "synthetic-token" {
+	if len(config.Ifaces) != 1 || config.Ifaces[0] != "eth-test" || !config.Traps["2222"].Enabled || config.Security.ScanPorts != 31 || config.AdminToken != "synthetic-token" || !config.TrustedMeshNetworkEnabled || !config.TrustedNetworkSharingEnabled {
 		t.Fatalf("operator selections or runtime credential lost: %#v", config)
+	}
+	if !saveConfig() {
+		t.Fatal("save enabled mesh state")
+	}
+	operator.TrustedMeshNetworkEnabled = false
+	operator.TrustedNetworkSharingEnabled = false
+	updated, err = json.Marshal(operator)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(configFile, updated, 0600); err != nil {
+		t.Fatal(err)
+	}
+	config = Config{}
+	loadConfig()
+	if config.TrustedMeshNetworkEnabled || config.TrustedNetworkSharingEnabled {
+		t.Fatal("operator config did not disable sharing")
 	}
 }

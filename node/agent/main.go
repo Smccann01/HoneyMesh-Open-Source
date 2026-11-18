@@ -24,7 +24,7 @@ import (
 	"honeymesh/internal/mesh"
 )
 
-const Version = "v2.3.6-rc4-nodepro6"
+const Version = "v2.3.6-rc5-nodepro6"
 
 func printStartupBanner() {
 	fmt.Println("\x1b[38;5;208m" +
@@ -316,7 +316,7 @@ func main() {
 		}
 	}
 	strictHB := config.Security.StrictHeartbeatAddr != nil && *config.Security.StrictHeartbeatAddr
-	scp, err = mesh.StartMeshServer(config.BindIP, advertiseAddr(), mPort, tlsCfg, clientTLS, handleRemoteBan, handleRemoteAllow, addPeer, statsFn, strictHB)
+	scp, err = mesh.StartMeshServer(config.BindIP, advertiseAddr(), mPort, tlsCfg, clientTLS, handleRemoteBan, handleRemoteAllow, addPeer, statsFn, strictHB, config.Mesh.RevokedPeerCerts...)
 	if err != nil {
 		log.Fatalf("[MESH] Startup failed: %v", err)
 	}

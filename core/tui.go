@@ -492,10 +492,9 @@ func handleTUICommand(reader *bufio.Reader, screen *int, mu *sync.Mutex, inputAc
 		if len(parts) < 2 {
 			return false
 		}
-		if scp != nil {
-			scp.RemovePeer(parts[1])
+		if err := revokeMeshPeer(parts[1]); err != nil {
+			fmt.Printf("revoke error: %v\n", err)
 		}
-		removePeer(parts[1])
 	}
 	return false
 }

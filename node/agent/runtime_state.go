@@ -36,6 +36,7 @@ type runtimeState struct {
 	MeshPeers                    []string              `json:"mesh_peers"`
 	MeshAuthoritativePeers       []string              `json:"mesh_authoritative_peers"`
 	MeshTrustedNetworks          []TrustedMeshNetwork  `json:"mesh_trusted_networks"`
+	MeshRevokedPeerCerts         []string              `json:"mesh_revoked_peer_certs,omitempty"`
 	Exchange                     ExchangeConfig        `json:"exchange"`
 	Security                     runtimeSecurityState  `json:"security"`
 }
@@ -61,6 +62,7 @@ func currentRuntimeState() runtimeState {
 		MeshPeers:                    config.Mesh.Peers,
 		MeshAuthoritativePeers:       config.Mesh.AuthoritativePeers,
 		MeshTrustedNetworks:          config.Mesh.TrustedNetworks,
+		MeshRevokedPeerCerts:         config.Mesh.RevokedPeerCerts,
 		Exchange:                     config.Exchange,
 		Security: runtimeSecurityState{
 			AllowlistBase: config.Security.AllowlistBase,
@@ -82,6 +84,7 @@ func applyRuntimeState(state runtimeState) {
 	config.Mesh.Peers = state.MeshPeers
 	config.Mesh.AuthoritativePeers = state.MeshAuthoritativePeers
 	config.Mesh.TrustedNetworks = state.MeshTrustedNetworks
+	config.Mesh.RevokedPeerCerts = state.MeshRevokedPeerCerts
 	config.Exchange = state.Exchange
 	config.Security.AllowlistBase = state.Security.AllowlistBase
 	config.Security.Whitelist = state.Security.Whitelist
@@ -114,14 +117,17 @@ func loadRuntimeState() error {
 		return fmt.Errorf("unsupported runtime state version %d", state.Version)
 	}
 	operatorIfaces, operatorTraps, operatorSecurity := config.Ifaces, config.Traps, config.Security
+	operatorMeshEnabled, operatorSharingEnabled := config.TrustedMeshNetworkEnabled, config.TrustedNetworkSharingEnabled
 	applyRuntimeState(state)
 	if state.ConfigFingerprint != "" && state.ConfigFingerprint != configFingerprint {
 		// An operator edit to the root config reselects protected interfaces,
-		// traps, and detection policy.
+		// traps, detection policy, and explicit sharing opt-ins.
 		// Keep generated credentials and the remaining runtime settings intact.
 		config.Ifaces, config.Traps = operatorIfaces, operatorTraps
 		config.Security = operatorSecurity
-		log.Printf("[STATE] Operator config changed; refreshed interfaces, traps, and security policy")
+		config.TrustedMeshNetworkEnabled = operatorMeshEnabled
+		config.TrustedNetworkSharingEnabled = operatorSharingEnabled
+		log.Printf("[STATE] Operator config changed; refreshed interfaces, traps, security policy, and sharing opt-ins")
 	}
 	return nil
 }

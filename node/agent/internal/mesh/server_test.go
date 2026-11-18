@@ -1,6 +1,8 @@
 package mesh
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -9,6 +11,22 @@ import (
 	"testing"
 	"time"
 )
+
+func TestRevokedPeerCertificateRejectedAfterRestart(t *testing.T) {
+	cert := &x509.Certificate{Raw: []byte("test peer certificate")}
+	request := httptest.NewRequest(http.MethodPost, "/mesh/heartbeat", nil)
+	request.TLS = &tls.ConnectionState{PeerCertificates: []*x509.Certificate{cert}}
+	s := &Server{peers: map[string]time.Time{}, peersKnown: map[string]time.Time{}, peerCerts: map[string]string{}, revokedCerts: map[string]struct{}{}}
+	s.recordPeerCertificate("10.0.0.2:9000", request)
+	fingerprint, ok := s.RevokePeer("10.0.0.2:9000")
+	if !ok || fingerprint == "" || !s.isRevokedCertificate(request) {
+		t.Fatal("revoked certificate remained usable")
+	}
+	restarted := &Server{revokedCerts: map[string]struct{}{fingerprint: {}}}
+	if !restarted.isRevokedCertificate(request) {
+		t.Fatal("persisted revocation was not applied after restart")
+	}
+}
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
 
