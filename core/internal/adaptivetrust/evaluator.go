@@ -79,7 +79,8 @@ func Evaluate(in Input, now time.Time) Decision {
 		d.Effect, d.Reason = Verify, "lease_unavailable"
 		return d
 	}
-	d.State, d.Effect, d.Reason, d.LeaseUntil = Established, Allow, "explicit_grant_verified", lease.UTC()
+	lease = lease.UTC()
+	d.State, d.Effect, d.Reason, d.LeaseUntil = Established, Allow, "explicit_grant_verified", &lease
 	return d
 }
 

@@ -75,6 +75,9 @@ func TestLeaseEndsAtEarliestVerifiedBoundary(t *testing.T) {
 	if got.PermitsAt(now.Add(12 * time.Second)) {
 		t.Fatal("expired allow lease remained usable")
 	}
+	if got.PermitsAt(now.Add(-time.Second)) {
+		t.Fatal("allow lease usable before evaluation")
+	}
 	in.Identity.ExpiresAt = now.Add(time.Minute)
 	in.Posture.ExpiresAt = now.Add(7 * time.Second)
 	got = Evaluate(in, now)

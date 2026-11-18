@@ -112,19 +112,20 @@ type Input struct {
 }
 
 type Decision struct {
-	SchemaVersion int       `json:"schema_version"`
-	State         State     `json:"state"`
-	Effect        Effect    `json:"effect"`
-	Reason        string    `json:"reason"`
-	GrantID       string    `json:"grant_id,omitempty"`
-	EvidenceIDs   []string  `json:"evidence_ids,omitempty"`
-	PolicyVersion string    `json:"policy_version"`
-	EvaluatedAt   time.Time `json:"evaluated_at"`
-	LeaseUntil    time.Time `json:"lease_until,omitempty"`
+	SchemaVersion int        `json:"schema_version"`
+	State         State      `json:"state"`
+	Effect        Effect     `json:"effect"`
+	Reason        string     `json:"reason"`
+	GrantID       string     `json:"grant_id,omitempty"`
+	EvidenceIDs   []string   `json:"evidence_ids,omitempty"`
+	PolicyVersion string     `json:"policy_version"`
+	EvaluatedAt   time.Time  `json:"evaluated_at"`
+	LeaseUntil    *time.Time `json:"lease_until,omitempty"`
 }
 
 // PermitsAt is the only interpretation of a decision that may pass traffic.
 // A stored allow cannot be reused after its bounded lease expires.
 func (d Decision) PermitsAt(now time.Time) bool {
-	return d.SchemaVersion == SchemaVersion && d.Effect == Allow && !d.LeaseUntil.IsZero() && now.Before(d.LeaseUntil)
+	return d.SchemaVersion == SchemaVersion && d.Effect == Allow && d.LeaseUntil != nil &&
+		!now.IsZero() && !now.Before(d.EvaluatedAt) && now.Before(*d.LeaseUntil)
 }

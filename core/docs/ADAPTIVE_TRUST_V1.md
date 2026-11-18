@@ -66,3 +66,13 @@ At `2027-01-01T00:00:00Z`, a local policy with version `pilot-1`, required postu
 ## Test boundary
 
 `go test ./internal/adaptivetrust` covers no-grant and no-escalation decisions, session/tenant/resource mismatch, stale identity and posture, verified anomaly, durable hold behavior, and the shortest lease boundary. `go test -race ./internal/adaptivetrust` checks the current pure package. These are source-level tests, not two-host or production qualification.
+
+The local simulator reads synthetic fixtures and labels output as a simulation:
+
+```sh
+cd core
+go run ./tools/hat-sim -at 2030-01-01T00:00:00Z < docs/fixtures/hat-read-allow.json
+go run ./tools/hat-sim -at 2030-01-01T00:00:00Z < docs/fixtures/hat-admin-deny.json
+```
+
+The simulator does not read the local HAT store, verify signatures, issue grants, or enforce its result. Fixture `verified` flags model an upstream verifier and are not proof of one.
