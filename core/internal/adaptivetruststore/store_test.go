@@ -95,6 +95,14 @@ func TestQuarantinePersistsUntilIndependentRelease(t *testing.T) {
 	if err := store.PlaceHold(ctx, hold); err != nil {
 		t.Fatal(err)
 	}
+	if err := store.PlaceHold(ctx, hold); err != nil {
+		t.Fatalf("identical hold retry failed: %v", err)
+	}
+	conflicting := hold
+	conflicting.ID = "hold-2"
+	if err := store.PlaceHold(ctx, conflicting); !errors.Is(err, ErrConflict) {
+		t.Fatalf("second active hold for relationship accepted: %v", err)
+	}
 	if err := db.Close(); err != nil {
 		t.Fatal(err)
 	}

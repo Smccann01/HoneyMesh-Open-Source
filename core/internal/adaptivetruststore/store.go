@@ -165,11 +165,29 @@ func (s *Store) PlaceHold(ctx context.Context, hold adaptivetrust.Hold) error {
 		blank(hold.Action) || blank(hold.PlacedBy) || hold.PlacedAt.IsZero() {
 		return errors.New("invalid adaptive trust hold")
 	}
-	_, err := s.db.ExecContext(ctx, `INSERT INTO hat_holds(id,tenant_id,subject_id,resource_id,action,placed_by,placed_ns)
+	result, err := s.db.ExecContext(ctx, `INSERT OR IGNORE INTO hat_holds(id,tenant_id,subject_id,resource_id,action,placed_by,placed_ns)
 		VALUES(?,?,?,?,?,?,?)`, hold.ID, hold.TenantID, hold.SubjectID, hold.ResourceID,
 		hold.Action, hold.PlacedBy, hold.PlacedAt.UnixNano())
 	if err != nil {
 		return fmt.Errorf("place adaptive trust hold: %w", err)
+	}
+	count, err := result.RowsAffected()
+	if err != nil || count == 1 {
+		return err
+	}
+	var tenant, subject, resource, action, placedBy string
+	var placed int64
+	err = s.db.QueryRowContext(ctx, `SELECT tenant_id,subject_id,resource_id,action,placed_by,placed_ns FROM hat_holds WHERE id=?`, hold.ID).
+		Scan(&tenant, &subject, &resource, &action, &placedBy, &placed)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrConflict
+	}
+	if err != nil {
+		return err
+	}
+	if tenant != hold.TenantID || subject != hold.SubjectID || resource != hold.ResourceID || action != hold.Action ||
+		placedBy != hold.PlacedBy || placed != hold.PlacedAt.UnixNano() {
+		return ErrConflict
 	}
 	return nil
 }
