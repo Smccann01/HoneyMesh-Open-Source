@@ -30,6 +30,7 @@ func TestRuntimeStatePersistsMutableFieldsWithoutEditingOperatorConfig(t *testin
 	config.AdminToken = "synthetic-token"
 	config.Security.ScanPorts = 25
 	config.Mesh.Peers = []string{"peer.example:9000"}
+	config.Mesh.RevokedPeerCerts = []string{"synthetic-fingerprint"}
 	config.Exchange.NodeID = "synthetic-node"
 	if !saveConfig() {
 		t.Fatal("save runtime state")
@@ -50,7 +51,7 @@ func TestRuntimeStatePersistsMutableFieldsWithoutEditingOperatorConfig(t *testin
 	}
 	config = Config{}
 	loadConfig()
-	if config.AdminToken != "synthetic-token" || config.Security.ScanPorts != 25 || len(config.Mesh.Peers) != 1 || config.Exchange.NodeID != "synthetic-node" {
+	if config.AdminToken != "synthetic-token" || config.Security.ScanPorts != 25 || len(config.Mesh.Peers) != 1 || len(config.Mesh.RevokedPeerCerts) != 1 || config.Mesh.RevokedPeerCerts[0] != "synthetic-fingerprint" || config.Exchange.NodeID != "synthetic-node" {
 		t.Fatalf("runtime state did not persist: %#v", config)
 	}
 	if config.NodeName != "operator-node" || config.Security.CertFile != filepath.Join(root, "certs/node.crt") || config.Mesh.TLS.PeerCAFile != filepath.Join(root, "certs/peer-ca.crt") {
