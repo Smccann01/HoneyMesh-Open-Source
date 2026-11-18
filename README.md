@@ -12,3 +12,5 @@ HoneyMesh provides defensive tools for existing servers. This public repository 
 Local administrators generate their own credentials. Self-hosted Exchange enrollment uses admin-issued, one-use tokens. Community observations require explicit opt-in, and receiving hosts decide enforcement locally. Direct mesh requires an operator-configured cluster identity and mutual TLS trust.
 
 This is a source preview, not a signed or qualified production installer. Read each component's README, license, and security guidance before deployment. Report vulnerabilities using the component SECURITY.md files.
+
+See [release readiness and host support](RELEASE_READINESS.md) for the tested environment, current limits, and the gates before a signed installer release.

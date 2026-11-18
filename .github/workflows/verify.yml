@@ -1,0 +1,57 @@
+name: Verify source and packages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.10'
+          cache: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            exchange/package-lock.json
+            node/node-guard/package-lock.json
+            firewall-console/package-lock.json
+      - name: Install package inspection tools
+        run: sudo apt-get update && sudo apt-get install -y rpm cpio ripgrep
+      - name: Test Core and Node agent
+        run: |
+          (cd core && go test ./...)
+          (cd node/agent && go test ./...)
+          (cd node/agentbridge && go test ./...)
+      - name: Test Node Guard and Firewall Console
+        run: |
+          (cd node/node-guard && npm ci && npm test)
+          (cd firewall-console && npm ci && npm test)
+      - name: Build and test Exchange
+        run: |
+          cd exchange
+          npm ci
+          npm run build
+          npm run test:network-admin
+          npm run test:discovery
+          npm run test:protocol
+      - name: Build Core packages twice
+        run: |
+          mkdir -p "$RUNNER_TEMP/hm-build-a" "$RUNNER_TEMP/hm-build-b"
+          (cd core && DIST_DIR="$RUNNER_TEMP/hm-build-a" bash tools/build-linux-packs.sh)
+          (cd core && DIST_DIR="$RUNNER_TEMP/hm-build-b" bash tools/build-linux-packs.sh)
+          python3 core/tools/verify-release-packs.py "$RUNNER_TEMP/hm-build-a"
+          python3 core/tools/verify-release-packs.py "$RUNNER_TEMP/hm-build-b"
+          diff -u \
+            <(cd "$RUNNER_TEMP/hm-build-a" && find . -type f -print0 | sort -z | xargs -0 sha256sum) \
+            <(cd "$RUNNER_TEMP/hm-build-b" && find . -type f -print0 | sort -z | xargs -0 sha256sum)
