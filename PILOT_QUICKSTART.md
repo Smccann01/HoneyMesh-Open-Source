@@ -1,6 +1,6 @@
 # First server: HoneyMesh Core pilot
 
-This guide is for a **noncritical Ubuntu 24.04 AMD64 host** with provider-console recovery access. The current package is a pilot candidate; [release readiness](RELEASE_READINESS.md) lists what remains before general production use. Keep your existing protections in place while you evaluate it.
+This guide is for a **noncritical Ubuntu 24.04 AMD64 host** with provider-console recovery access. The current package is a pilot candidate; [release readiness](RELEASE_READINESS.md) lists what remains before general production use. Keep your existing protections in place while you evaluate it. **RC4 has a confirmed peer-revocation defect. Do not use RC4 for trusted-network sharing.**
 
 ## 1. Check the host and recovery route
 

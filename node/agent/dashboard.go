@@ -1126,10 +1126,10 @@ func apiMeshRevoke(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	if scp != nil {
-		scp.RemovePeer(req.Peer)
+	if err := revokeMeshPeer(req.Peer); err != nil {
+		http.Error(w, err.Error(), http.StatusConflict)
+		return
 	}
-	removePeer(req.Peer)
 	broadcastPeers()
 	writeJSON(w, map[string]bool{"ok": true})
 }

@@ -37,6 +37,7 @@ type runtimeState struct {
 	MeshPeers                    []string              `json:"mesh_peers"`
 	MeshAuthoritativePeers       []string              `json:"mesh_authoritative_peers"`
 	MeshTrustedNetworks          []TrustedMeshNetwork  `json:"mesh_trusted_networks"`
+	MeshRevokedPeerCerts         []string              `json:"mesh_revoked_peer_certs,omitempty"`
 	Exchange                     ExchangeConfig        `json:"exchange"`
 	Security                     runtimeSecurityState  `json:"security"`
 }
@@ -62,6 +63,7 @@ func currentRuntimeState() runtimeState {
 		MeshPeers:                    config.Mesh.Peers,
 		MeshAuthoritativePeers:       config.Mesh.AuthoritativePeers,
 		MeshTrustedNetworks:          config.Mesh.TrustedNetworks,
+		MeshRevokedPeerCerts:         config.Mesh.RevokedPeerCerts,
 		Exchange:                     config.Exchange,
 		Security: runtimeSecurityState{
 			AllowlistBase:          config.Security.AllowlistBase,
@@ -84,6 +86,7 @@ func applyRuntimeState(state runtimeState) {
 	config.Mesh.Peers = state.MeshPeers
 	config.Mesh.AuthoritativePeers = state.MeshAuthoritativePeers
 	config.Mesh.TrustedNetworks = state.MeshTrustedNetworks
+	config.Mesh.RevokedPeerCerts = state.MeshRevokedPeerCerts
 	config.Exchange = state.Exchange
 	config.Security.AllowlistBase = state.Security.AllowlistBase
 	config.Security.Whitelist = state.Security.Whitelist

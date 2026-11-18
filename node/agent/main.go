@@ -316,7 +316,7 @@ func main() {
 		}
 	}
 	strictHB := config.Security.StrictHeartbeatAddr != nil && *config.Security.StrictHeartbeatAddr
-	scp, err = mesh.StartMeshServer(config.BindIP, advertiseAddr(), mPort, tlsCfg, clientTLS, handleRemoteBan, handleRemoteAllow, addPeer, statsFn, strictHB)
+	scp, err = mesh.StartMeshServer(config.BindIP, advertiseAddr(), mPort, tlsCfg, clientTLS, handleRemoteBan, handleRemoteAllow, addPeer, statsFn, strictHB, config.Mesh.RevokedPeerCerts...)
 	if err != nil {
 		log.Fatalf("[MESH] Startup failed: %v", err)
 	}

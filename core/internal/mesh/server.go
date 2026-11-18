@@ -3,7 +3,9 @@ package mesh
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -82,11 +84,13 @@ type Server struct {
 	statsFn             func() HeartbeatStats
 	strictHeartbeatAddr bool
 
-	mu         sync.Mutex
-	peers      map[string]time.Time
-	peersKnown map[string]time.Time
-	stats      map[string]PeerStats
-	caps       map[string]PeerCapability
+	mu           sync.Mutex
+	peers        map[string]time.Time
+	peersKnown   map[string]time.Time
+	stats        map[string]PeerStats
+	caps         map[string]PeerCapability
+	peerCerts    map[string]string
+	revokedCerts map[string]struct{}
 }
 
 // NewTrustRegistry returns a stub trust registry
@@ -98,7 +102,7 @@ func NewTrustRegistry() *TrustRegistry {
 type TrustRegistry struct{}
 
 // StartMeshServer starts the mesh server and returns a controller.
-func StartMeshServer(bindIP string, advIP string, port int, tlsCfg *tls.Config, clientTLS *tls.Config, onBan BanHandler, onAllow AllowHandler, onPeer PeerHandler, statsFn func() HeartbeatStats, strictHeartbeatAddr bool) (*Server, error) {
+func StartMeshServer(bindIP string, advIP string, port int, tlsCfg *tls.Config, clientTLS *tls.Config, onBan BanHandler, onAllow AllowHandler, onPeer PeerHandler, statsFn func() HeartbeatStats, strictHeartbeatAddr bool, revokedFingerprints ...string) (*Server, error) {
 	if tlsCfg == nil || clientTLS == nil {
 		return nil, fmt.Errorf("mesh TLS configuration is required")
 	}
@@ -122,6 +126,13 @@ func StartMeshServer(bindIP string, advIP string, port int, tlsCfg *tls.Config, 
 		peersKnown:          make(map[string]time.Time),
 		stats:               make(map[string]PeerStats),
 		caps:                make(map[string]PeerCapability),
+		peerCerts:           make(map[string]string),
+		revokedCerts:        make(map[string]struct{}),
+	}
+	for _, fingerprint := range revokedFingerprints {
+		if fingerprint != "" {
+			s.revokedCerts[fingerprint] = struct{}{}
+		}
 	}
 
 	mux := http.NewServeMux()
@@ -133,8 +144,14 @@ func StartMeshServer(bindIP string, advIP string, port int, tlsCfg *tls.Config, 
 
 	addr := net.JoinHostPort(bindIP, fmt.Sprintf("%d", port))
 	srv := &http.Server{
-		Addr:              addr,
-		Handler:           mux,
+		Addr: addr,
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if s.isRevokedCertificate(r) {
+				http.Error(w, "peer certificate revoked", http.StatusForbidden)
+				return
+			}
+			mux.ServeHTTP(w, r)
+		}),
 		TLSConfig:         tlsCfg,
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
@@ -268,7 +285,52 @@ func (s *Server) RemovePeer(peer string) {
 	s.mu.Lock()
 	delete(s.peers, p)
 	delete(s.peersKnown, p)
+	delete(s.peerCerts, p)
 	s.mu.Unlock()
+}
+
+// RevokePeer denies all future requests made with an enrolled peer's certificate.
+// The returned fingerprint must be persisted by the caller before success is reported.
+func (s *Server) RevokePeer(peer string) (string, bool) {
+	p := normalizePeer(peer)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	fingerprint := s.peerCerts[p]
+	if fingerprint == "" {
+		return "", false
+	}
+	s.revokedCerts[fingerprint] = struct{}{}
+	delete(s.peers, p)
+	delete(s.peersKnown, p)
+	delete(s.peerCerts, p)
+	return fingerprint, true
+}
+
+func peerCertificateFingerprint(r *http.Request) string {
+	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
+		return ""
+	}
+	sum := sha256.Sum256(r.TLS.PeerCertificates[0].Raw)
+	return hex.EncodeToString(sum[:])
+}
+
+func (s *Server) isRevokedCertificate(r *http.Request) bool {
+	fingerprint := peerCertificateFingerprint(r)
+	if fingerprint == "" {
+		return false
+	}
+	s.mu.Lock()
+	_, revoked := s.revokedCerts[fingerprint]
+	s.mu.Unlock()
+	return revoked
+}
+
+func (s *Server) recordPeerCertificate(peer string, r *http.Request) {
+	if fingerprint := peerCertificateFingerprint(r); fingerprint != "" {
+		s.mu.Lock()
+		s.peerCerts[normalizePeer(peer)] = fingerprint
+		s.mu.Unlock()
+	}
 }
 
 // Join sends a join request to a peer.
@@ -344,6 +406,7 @@ func (s *Server) handleJoin(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	s.setPeer(addr, time.Now())
+	s.recordPeerCertificate(addr, r)
 	s.setCapability(addr, req.Capability)
 	s.addKnownPeer(addr, time.Now())
 	if s.onPeer != nil {
@@ -411,6 +474,7 @@ func (s *Server) handleHeartbeat(w http.ResponseWriter, r *http.Request) {
 		addr := normalizeAddrFromReq(req.Addr, r.RemoteAddr)
 		now := time.Now()
 		s.setPeer(addr, now)
+		s.recordPeerCertificate(addr, r)
 		s.setCapability(addr, req.Capability)
 		s.addKnownPeer(addr, time.Now())
 		s.mu.Lock()
