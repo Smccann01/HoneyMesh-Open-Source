@@ -1,9 +1,8 @@
 # HoneyMesh Operator Manual
 
-Date: 2026-04-07  
-Version: v2.3.6-rc1-Iron-Hive
+Status: source preview; check `main.go` for the exact version being built.
 
-This manual covers the current HoneyMesh operator workflow for local protection, Pro licensing, HoneyMesh Exchange connectivity, trusted mesh discovery, per-network trust, temporary join tokens, and day-to-day administration.
+This manual covers local protection, self-hosted Exchange connectivity, trusted mesh discovery, per-network trust, temporary join tokens, and day-to-day administration. Some sections retain legacy publisher-license terminology; the community self-hosted path does not require a purchase.
 
 ---
 
@@ -52,7 +51,7 @@ Common local files used at runtime:
 Build from source:
 
 ```bash
-cd /path/to/HoneyMesh-2.3.6-rc1
+cd /path/to/HoneyMesh-Core
 GOTOOLCHAIN=go1.26.10 go build -o honeymesh .
 ```
 
@@ -65,7 +64,7 @@ sudo systemctl start honeymesh.service
 Install the current Debian package:
 
 ```bash
-sudo dpkg -i /path/to/honeymesh_2.3.6-rc1-Iron-Hive_amd64.deb
+sudo dpkg -i /path/to/honeymesh_2.3.6-rc4-corefirewall4_amd64.deb
 ```
 
 The package installs a Community configuration bound to `127.0.0.1`, with no interfaces or traps selected and sharing disabled. On a systemd host, a fresh install starts the service. Edit `/etc/honeymesh/honeymesh.json` to choose the interfaces and traps you intend to protect, then run `sudo systemctl restart honeymesh.service`; the service detects the operator config change and applies those selections. The configuration is root-owned and readable by the `honeymesh` service group. The first start saves a unique admin token in `/var/lib/honeymesh/runtime-state.json`. The installer generates local TLS certificates per machine; for remote dashboard access or trusted mesh, configure certificates and CA trust for the actual network names and addresses. Never copy another node's private key or live configuration into an installation package.
@@ -76,11 +75,7 @@ Run the packaged service:
 sudo systemctl enable --now honeymesh.service
 ```
 
-Startup banner:
-
-```text
-🍯  Honey Mesh v2.3.6-rc1-Iron-Hive Active
-```
+Confirm the reported version and mode from the running service before selecting an interface.
 
 Generate a temporary trusted mesh invite token:
 
@@ -97,15 +92,15 @@ sudo runuser -u honeymesh -- /usr/bin/honeymesh -config /etc/honeymesh/honeymesh
 Manual exchange enrollment flow:
 
 ```bash
-sudo runuser -u honeymesh -- /usr/bin/honeymesh -config /etc/honeymesh/honeymesh.json -state-dir /var/lib/honeymesh -register-exchange https://nettools.cloud -enroll-token <ENROLL_TOKEN>
+sudo runuser -u honeymesh -- /usr/bin/honeymesh -config /etc/honeymesh/honeymesh.json -state-dir /var/lib/honeymesh -register-exchange https://<YOUR_EXCHANGE_ORIGIN> -enroll-token <ENROLL_TOKEN>
 ```
 
-Current recommended operator flow:
+Self-hosted community operator flow:
 
-- Upload a valid Pro `license.json` in the app.
-- Open `TRUSTED PEERS`.
-- Enable `NetTools.cloud Sharing`.
-- HoneyMesh bootstraps against the live exchange and stores its exchange credentials automatically.
+- Provision an Exchange administrator locally and create a one-use enrollment token.
+- Point this node at the operator-controlled Exchange origin and enroll with that token.
+- Enable sharing explicitly; review observations before configuring any local enforcement.
+- Configure mutual TLS and an operator-owned cluster identity separately for direct mesh.
 
 Uninstall:
 
@@ -138,19 +133,19 @@ Behavior:
 
 ---
 
-**5. Licensing And Feature Gates**
+**5. Community Access And Legacy License Paths**
 
 License tiers:
 
-- `COMMUNITY`: Free local ENFORCE/LOCKDOWN protection, local dashboard and analytics, and optional self-hosted Exchange observation feed.
-- `PRO`: Community features plus premium dashboard controls, HoneyMesh Exchange opt-in, trusted mesh participation, and shared defense features.
+- `COMMUNITY`: Free local protection, dashboard and analytics, direct mesh with operator-controlled trust, and optional self-hosted Exchange observation feed.
+- `PRO`: Legacy publisher-license path retained for compatibility with earlier deployments. It is not needed for the self-hosted community path.
 
 Important behavior:
 
 - Sharing features are off by default.
 - Operators must explicitly enable them.
-- A Pro license becoming invalid disables legacy trusted mesh participation. An explicitly opted-in self-hosted Exchange connection remains available.
-- HoneyMesh validates the signed license locally before enabling Pro-only capabilities.
+- A legacy Pro license becoming invalid disables that legacy path. An explicitly opted-in self-hosted Exchange connection remains available.
+- Do not use a legacy publisher bootstrap endpoint for a self-hosted community Exchange.
 
 Current shared-defense model:
 
@@ -528,11 +523,11 @@ Headers:
 Startup problems:
 
 - `failed to raise memlock limit`: run as root or raise memlock.
-- `license invalid` or `license expired`: HoneyMesh falls back to Community mode and disables Pro-only shared defense features.
+- `license invalid` or `license expired`: a legacy publisher-license path falls back to Community mode. Self-hosted community controls remain available.
 
 Exchange toggle fails:
 
-- Check that the node has a valid Pro license.
+- Check whether you are using the self-hosted community enrollment path or the legacy publisher bootstrap path.
 - Confirm outbound HTTPS reachability to the configured Exchange host.
 - Check the exact error shown in the `TRUSTED PEERS` modal.
 - If bootstrap fails, HoneyMesh now surfaces the backend error directly instead of a generic save failure.
@@ -550,7 +545,7 @@ No discovered networks:
 
 Trusted mesh join issues:
 
-- Verify Pro mode.
+- Verify the operator-owned cluster identity and explicit mesh opt-in.
 - Verify `trusted_mesh_network_enabled` is on.
 - Verify peer reachability and certificate trust.
 - Verify the invite token is still valid.
@@ -577,7 +572,7 @@ Operational guidance:
 - Use Exchange to discover candidate cluster IDs.
 - Use trusted mesh levels to formalize how much you trust another network.
 - Use temporary invite tokens for onboarding instead of long-lived admin secrets.
-- Keep Community nodes local-only unless you intentionally upgrade them.
+- Keep new nodes local and in TEST mode until peer trust, expiry, revocation, and recovery have been exercised.
 
 ---
 
@@ -588,7 +583,7 @@ Common actions:
 - `TEST MODE`: detect only
 - `ENFORCE`: active blocking
 - `LOCKDOWN`: aggressive enforcement
-- `NetTools.cloud Sharing`: opt in to HoneyMesh Exchange
+- `NetTools.cloud Sharing`: legacy UI label for an Exchange sharing control; point the community path at your own Exchange origin
 - `Trusted Mesh Networks`: opt in to direct peer federation
 - `L0`: observe only
 - `L1`: limited federated trust
