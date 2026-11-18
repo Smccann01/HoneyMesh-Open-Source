@@ -114,14 +114,17 @@ func loadRuntimeState() error {
 		return fmt.Errorf("unsupported runtime state version %d", state.Version)
 	}
 	operatorIfaces, operatorTraps, operatorSecurity := config.Ifaces, config.Traps, config.Security
+	operatorMeshEnabled, operatorSharingEnabled := config.TrustedMeshNetworkEnabled, config.TrustedNetworkSharingEnabled
 	applyRuntimeState(state)
 	if state.ConfigFingerprint != "" && state.ConfigFingerprint != configFingerprint {
 		// An operator edit to the root config reselects protected interfaces,
-		// traps, and detection policy.
+		// traps, detection policy, and explicit sharing opt-ins.
 		// Keep generated credentials and the remaining runtime settings intact.
 		config.Ifaces, config.Traps = operatorIfaces, operatorTraps
 		config.Security = operatorSecurity
-		log.Printf("[STATE] Operator config changed; refreshed interfaces, traps, and security policy")
+		config.TrustedMeshNetworkEnabled = operatorMeshEnabled
+		config.TrustedNetworkSharingEnabled = operatorSharingEnabled
+		log.Printf("[STATE] Operator config changed; refreshed interfaces, traps, security policy, and sharing opt-ins")
 	}
 	return nil
 }

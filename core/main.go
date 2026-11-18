@@ -24,7 +24,7 @@ import (
 	"honeymesh/internal/mesh"
 )
 
-const Version = "v2.3.6-rc4-corefirewall4"
+const Version = "v2.3.6-rc5-corefirewall4"
 
 func printStartupBanner() {
 	fmt.Println("\x1b[38;5;208m" +
