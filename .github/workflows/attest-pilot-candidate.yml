@@ -1,0 +1,44 @@
+name: Attest Core pilot candidate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+jobs:
+  candidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.10'
+          cache: false
+      - name: Install package inspection tools
+        run: sudo apt-get update && sudo apt-get install -y rpm cpio ripgrep
+      - name: Build and compare
+        shell: bash
+        run: |
+          mkdir -p dist/candidate-a dist/candidate-b
+          (cd core && DIST_DIR="$GITHUB_WORKSPACE/dist/candidate-a" bash tools/build-linux-packs.sh)
+          (cd core && DIST_DIR="$GITHUB_WORKSPACE/dist/candidate-b" bash tools/build-linux-packs.sh)
+          python3 core/tools/verify-release-packs.py dist/candidate-a
+          python3 core/tools/verify-release-packs.py dist/candidate-b
+          diff -u \
+            <(cd dist/candidate-a && find . -type f -print0 | sort -z | xargs -0 sha256sum) \
+            <(cd dist/candidate-b && find . -type f -print0 | sort -z | xargs -0 sha256sum)
+          (cd dist/candidate-a && find . -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
+      - name: Attest candidate packages and checksum manifest
+        uses: actions/attest@v4
+        with:
+          subject-path: dist/candidate-a/**
+      - name: Upload pilot candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: honeymesh-core-pilot-candidate-${{ github.sha }}
+          path: dist/candidate-a/
+          retention-days: 7

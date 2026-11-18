@@ -23,3 +23,7 @@ Core requires Linux kernel 5.8 or newer and a mounted BPF filesystem. A successf
 5. With two noncritical hosts, verify explicit admission, short-lived enrollment, observation delivery, replay resistance, expiry, revocation, source removal, and local enforcement authority. Record false positives and recovery time before expanding the network.
 
 The official managed regional federation is a separate service. Self-hosted operators choose their own participants and data policies. Site configuration and managed-service records remain outside this repository.
+
+## Pilot candidate provenance
+
+An operator can trigger the `Attest Core pilot candidate` GitHub Actions workflow on `main`. It builds the packages twice, compares hashes, and creates GitHub keyless provenance attestations for the short-lived workflow artifacts. After downloading and extracting the artifact, run `sha256sum -c SHA256SUMS` from its root and verify each package with `gh attestation verify <package-path> -R Smccann01/HoneyMesh-Open-Source`. Check that the attested source revision and workflow are the ones you intend to test. These artifacts are pilot candidates, not qualified general installers.
