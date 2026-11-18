@@ -1,6 +1,6 @@
 # First server: HoneyMesh Core pilot
 
-This guide is for a **noncritical Ubuntu 24.04 AMD64 host** with provider-console recovery access. The current package is a pilot candidate; [release readiness](RELEASE_READINESS.md) lists what remains before general production use. Keep your existing protections in place while you evaluate it. **RC4 has a confirmed peer-revocation defect. Do not use RC4 for trusted-network sharing.**
+This guide is for a **noncritical Ubuntu 24.04 AMD64 host** with provider-console recovery access. The current package is a pilot candidate; [release readiness](RELEASE_READINESS.md) lists what remains before general production use. Keep your existing protections in place while you evaluate it. **Use RC6 or newer for trusted-network sharing. RC4 has a confirmed peer-revocation defect.**
 
 ## 1. Check the host and recovery route
 
@@ -18,20 +18,20 @@ Proceed only with Ubuntu 24.04, `x86_64`, a kernel at least 5.8, and a mounted B
 
 ## 2. Download and verify the exact pilot
 
-Download the AMD64 `.deb` and `SHA256SUMS` from [v2.3.6-rc4-pilot.1](https://github.com/Smccann01/HoneyMesh-Open-Source/releases/tag/v2.3.6-rc4-pilot.1) into the same directory. Then run:
+Download the AMD64 `.deb` and `SHA256SUMS` from [v2.3.6-rc6-pilot.1](https://github.com/Smccann01/HoneyMesh-Open-Source/releases/tag/v2.3.6-rc6-pilot.1) into the same directory. Then run:
 
 ```bash
 sha256sum -c SHA256SUMS
-gh attestation verify honeymesh_2.3.6-rc4-corefirewall4_amd64.deb \
+gh attestation verify honeymesh_2.3.6-rc6-corefirewall4_amd64.deb \
   -R Smccann01/HoneyMesh-Open-Source
 ```
 
-The expected SHA-256 is `f929088aa5b21b26179603b8e9b36c025b0a5fe30947985dc899e050965329fe`. Stop if the checksum or attestation fails. GitHub CLI (`gh`) is needed for the attestation check; inspect the verified source revision and workflow before installation.
+The expected SHA-256 is `fc3699945f5ea2904bffa22dd8ff5bbc074ba7b4fc9a3e8b9245c8ffd748dbf6`. Stop if the checksum or attestation fails. A current GitHub CLI (`gh`) with `gh attestation` support is needed for the attestation check; inspect the verified source revision and workflow before installation.
 
 ## 3. Install without sharing or enforcement
 
 ```bash
-sudo dpkg -i ./honeymesh_2.3.6-rc4-corefirewall4_amd64.deb
+sudo dpkg -i ./honeymesh_2.3.6-rc6-corefirewall4_amd64.deb
 systemctl is-active honeymesh.service
 sudo python3 - <<'PY'
 import json
