@@ -2,7 +2,7 @@ name: Verify source and packages
 
 on:
   push:
-    branches: [main]
+    branches: [main, honeymesh-2.0]
   pull_request:
 
 permissions:
@@ -46,6 +46,7 @@ jobs:
           npm run test:discovery
           npm run test:protocol
       - name: Build Core packages twice
+        if: github.ref != 'refs/heads/honeymesh-2.0' && github.base_ref != 'honeymesh-2.0'
         run: |
           mkdir -p "$RUNNER_TEMP/hm-build-a" "$RUNNER_TEMP/hm-build-b"
           (cd core && DIST_DIR="$RUNNER_TEMP/hm-build-a" bash tools/build-linux-packs.sh)

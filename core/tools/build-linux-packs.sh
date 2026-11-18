@@ -4,8 +4,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 DIST_DIR="${DIST_DIR:-$ROOT_DIR/dist/packages}"
-TMP_DIR="$(mktemp -d)"
 
+if [[ -f "$ROOT_DIR/../.honeymesh-2.0-development" ]]; then
+  echo "ERROR: HoneyMesh 2.0 has no qualified installer; current-line packages are disabled on this branch" >&2
+  exit 1
+fi
+
+TMP_DIR="$(mktemp -d)"
 cleanup() {
   rm -rf "$TMP_DIR"
 }
