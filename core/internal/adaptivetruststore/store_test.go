@@ -163,3 +163,63 @@ func TestDecisionHistoryIsBoundedAndScoped(t *testing.T) {
 		t.Fatal("unbounded history query accepted")
 	}
 }
+
+func TestPreviewUsesOnlyDurableLocalAuthority(t *testing.T) {
+	ctx := context.Background()
+	now := time.Unix(1_800_000_000, 0)
+	store, db := openStore(t, filepath.Join(t.TempDir(), "hat.db"))
+	defer db.Close()
+	input := adaptivetrust.Input{SchemaVersion: adaptivetrust.SchemaVersion,
+		Request: testRequest(), Identity: &adaptivetrust.Identity{SubjectID: "web-a", SessionID: "session-1",
+			VerifierID: "pilot-ca", Verified: true, ExpiresAt: now.Add(time.Minute)},
+		Posture: &adaptivetrust.Posture{ID: "posture-1", SubjectID: "web-a", VerifierID: "posture-checker",
+			Verified: true, ObservedAt: now, ExpiresAt: now.Add(time.Minute)},
+		Policy: adaptivetrust.Policy{Version: "pilot-1", RequirePosture: true, MaxLease: 30 * time.Second}}
+	forged := testGrant(now)
+	input.Grant = &forged
+	if got, err := store.Preview(ctx, input, now); err != nil || got.PermitsAt(now) {
+		t.Fatalf("caller-supplied grant bypassed storage: %+v %v", got, err)
+	}
+	if err := store.PutGrant(ctx, forged); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := store.Preview(ctx, input, now); err != nil || !got.PermitsAt(now) {
+		t.Fatalf("approved read not previewed: %+v %v", got, err)
+	}
+	hold := adaptivetrust.Hold{ID: "hold-1", TenantID: "tenant-a", SubjectID: "web-a", ResourceID: "orders-api",
+		Action: "orders.read", PlacedBy: "operator-1", PlacedAt: now}
+	if err := store.PlaceHold(ctx, hold); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := store.Preview(ctx, input, now); err != nil || got.State != adaptivetrust.Quarantined || got.PermitsAt(now) {
+		t.Fatalf("caller omitted durable hold: %+v %v", got, err)
+	}
+}
+
+func TestPreviewFailsClosedOnAuditOrStateError(t *testing.T) {
+	ctx := context.Background()
+	now := time.Unix(1_800_000_000, 0)
+	store, db := openStore(t, filepath.Join(t.TempDir(), "hat.db"))
+	defer db.Close()
+	if err := store.PutGrant(ctx, testGrant(now)); err != nil {
+		t.Fatal(err)
+	}
+	input := adaptivetrust.Input{SchemaVersion: adaptivetrust.SchemaVersion,
+		Request: testRequest(), Identity: &adaptivetrust.Identity{SubjectID: "web-a", SessionID: "session-1",
+			VerifierID: "pilot-ca", Verified: true, ExpiresAt: now.Add(time.Minute)},
+		Posture: &adaptivetrust.Posture{ID: "posture-1", SubjectID: "web-a", VerifierID: "posture-checker",
+			Verified: true, ObservedAt: now, ExpiresAt: now.Add(time.Minute)},
+		Policy: adaptivetrust.Policy{Version: "pilot-1", RequirePosture: true, MaxLease: 30 * time.Second}}
+	if _, err := db.Exec(`DROP TABLE hat_decisions`); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := store.Preview(ctx, input, now); err == nil || got.PermitsAt(now) || got.Reason != "audit_unavailable" {
+		t.Fatalf("audit failure permitted access: %+v %v", got, err)
+	}
+	if _, err := db.Exec(`DROP TABLE hat_grants`); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := store.Preview(ctx, input, now); err == nil || got.PermitsAt(now) || got.Reason != "state_unavailable" {
+		t.Fatalf("state failure permitted access: %+v %v", got, err)
+	}
+}
