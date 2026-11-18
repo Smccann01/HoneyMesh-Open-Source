@@ -11,6 +11,6 @@ HoneyMesh provides defensive tools for existing servers. This public repository 
 
 Local administrators generate their own credentials. Self-hosted Exchange enrollment uses admin-issued, one-use tokens. Community observations require explicit opt-in, and receiving hosts decide enforcement locally. Direct mesh requires an operator-configured cluster identity and mutual TLS trust.
 
-This is a source preview, not a signed or qualified production installer. Read each component's README, license, and security guidance before deployment. Report vulnerabilities using the component SECURITY.md files.
+The [Core pilot release](https://github.com/Smccann01/HoneyMesh-Open-Source/releases/tag/v2.3.6-rc4-pilot.1) provides a checksummed, keyless-attested AMD64 Debian package for noncritical Ubuntu 24.04 hosts. It is not a qualified general production installer. Start with the [first-server pilot guide](PILOT_QUICKSTART.md), then read the component license and security guidance. Report vulnerabilities using the component SECURITY.md files.
 
 See [release readiness and host support](RELEASE_READINESS.md) for the tested environment, current limits, and the gates before a signed installer release.
