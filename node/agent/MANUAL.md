@@ -58,11 +58,12 @@ GOTOOLCHAIN=go1.26.10 go build -o honeymesh .
 
 The source build creates a local binary. The service commands below apply after package installation.
 
-Install the Ubuntu 24.04 AMD64 pilot package after downloading it with `SHA256SUMS` from the [pilot release](https://github.com/Smccann01/HoneyMesh-Open-Source/releases/tag/v2.3.6-rc4-pilot.1). This candidate is for noncritical hosts with console recovery access; [release readiness](../../RELEASE_READINESS.md) lists the remaining qualification work.
+Install the Ubuntu 24.04 AMD64 pilot package after downloading it with `SHA256SUMS` from the [RC6 pilot release](https://github.com/Smccann01/HoneyMesh-Open-Source/releases/tag/v2.3.6-rc6-pilot.1). This candidate is for noncritical hosts with console recovery access; [release readiness](../../RELEASE_READINESS.md) lists the remaining qualification work. RC4 has a peer-revocation defect and must not be used for trusted-network sharing.
 
 ```bash
 sha256sum -c SHA256SUMS
-sudo dpkg -i ./honeymesh_2.3.6-rc4-corefirewall4_amd64.deb
+gh attestation verify honeymesh_2.3.6-rc6-corefirewall4_amd64.deb -R Smccann01/HoneyMesh-Open-Source
+sudo dpkg -i ./honeymesh_2.3.6-rc6-corefirewall4_amd64.deb
 ```
 
 The package installs a Community configuration bound to `127.0.0.1`, with no interfaces or traps selected and sharing disabled. On a systemd host, a fresh install starts the service. Edit `/etc/honeymesh/honeymesh.json` to choose the interfaces and traps you intend to protect, then run `sudo systemctl restart honeymesh.service`; the service detects the operator config change and applies those selections. The configuration is root-owned and readable by the `honeymesh` service group. The first start saves a unique admin token in `/var/lib/honeymesh/runtime-state.json`. The installer generates local TLS certificates per machine; for remote dashboard access or trusted mesh, configure certificates and CA trust for the actual network names and addresses. Never copy another node's private key or live configuration into an installation package.
@@ -405,7 +406,7 @@ API examples:
 Create invite:
 
 ```bash
-curl -k -X POST "https://<NODE_IP>:<WEB_PORT>/api/mesh/invite" \
+curl --cacert /path/to/dashboard-ca.crt -X POST "https://<NODE_IP>:<WEB_PORT>/api/mesh/invite" \
   -H "X-Honey-Token: <ADMIN_TOKEN>" \
   -H "Content-Type: application/json" \
   -d '{"ttl_minutes":30}'
@@ -414,7 +415,7 @@ curl -k -X POST "https://<NODE_IP>:<WEB_PORT>/api/mesh/invite" \
 Join with invite:
 
 ```bash
-curl -k -X POST "https://<LOCAL_NODE_IP>:<LOCAL_WEB_PORT>/api/mesh/join" \
+curl --cacert /path/to/dashboard-ca.crt -X POST "https://<LOCAL_NODE_IP>:<LOCAL_WEB_PORT>/api/mesh/join" \
   -H "X-Honey-Token: <LOCAL_ADMIN_TOKEN>" \
   -H "Content-Type: application/json" \
   -d '{"peer":"<PEER_IP>:9000","token":"<TEMP_TOKEN>"}'
