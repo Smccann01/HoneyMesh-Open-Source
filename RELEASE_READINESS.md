@@ -26,6 +26,8 @@ The official managed regional federation is a separate service. Self-hosted oper
 
 ## Pilot candidate provenance
 
+The [public Core pilot pre-release](https://github.com/Smccann01/HoneyMesh-Open-Source/releases/tag/v2.3.6-rc4-pilot.1) provides the installable Ubuntu 24.04 AMD64 DEB and its matching `SHA256SUMS` file. Download both into one directory, run `sha256sum -c SHA256SUMS`, and verify the package with `gh attestation verify honeymesh_2.3.6-rc4-corefirewall4_amd64.deb -R Smccann01/HoneyMesh-Open-Source`. This is a noncritical-host pilot package; the remaining release gates above still apply.
+
 An operator can trigger the `Attest Core pilot candidate` GitHub Actions workflow on `main`. It builds the packages twice, compares hashes, and creates GitHub keyless provenance attestations for the short-lived workflow artifacts. After downloading and extracting the artifact, run `sha256sum -c SHA256SUMS` from its root and verify each package with `gh attestation verify <package-path> -R Smccann01/HoneyMesh-Open-Source`. Check that the attested source revision and workflow are the ones you intend to test. These artifacts are pilot candidates, not qualified general installers.
 
 The two-host pilot used workflow run `44342252537` from source revision `a5f96dde86255a2df0500e8e10a25593e478b0a0`. The AMD64 DEB checksum and attested subject digest both matched `f929088aa5b21b26179603b8e9b36c025b0a5fe30947985dc899e050965329fe`. The joining host used this exact package. The receiving host used the immediately preceding attested candidate.
