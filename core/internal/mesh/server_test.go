@@ -1,6 +1,7 @@
 package mesh
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -49,6 +50,24 @@ func TestHandleBanRequiresTrustedNetworkSharing(t *testing.T) {
 	}
 	if gotJA4 == "" || gotJA3 == "" {
 		t.Fatalf("expected JA4 and JA3 to propagate through handleBan, got ja4=%q ja3=%q", gotJA4, gotJA3)
+	}
+}
+
+func TestHandleJoinRejectsInvalidCapabilityBeforeUsingToken(t *testing.T) {
+	previousSharing, previousValidate, previousCapability := SharingEnabled, ValidateJoinToken, ValidatePeerCapability
+	defer func() {
+		SharingEnabled, ValidateJoinToken, ValidatePeerCapability = previousSharing, previousValidate, previousCapability
+	}()
+	SharingEnabled = func() bool { return true }
+	used := false
+	ValidateJoinToken = func(string) bool { used = true; return true }
+	ValidatePeerCapability = func(PeerCapability) error { return fmt.Errorf("invalid_publisher_identity") }
+
+	req := httptest.NewRequest(http.MethodPost, "/mesh/join", strings.NewReader(`{"token":"one-use-token","addr":"127.0.0.1:9000","capability":{}}`))
+	rec := httptest.NewRecorder()
+	(&Server{}).handleJoin(rec, req)
+	if rec.Code != http.StatusForbidden || used {
+		t.Fatalf("invalid capability: status=%d token_used=%t", rec.Code, used)
 	}
 }
 

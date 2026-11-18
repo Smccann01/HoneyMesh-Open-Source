@@ -327,12 +327,12 @@ func (s *Server) handleJoin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	if ValidateJoinToken == nil || !ValidateJoinToken(req.Token) {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
 	if err := validateCapability(req.Capability); err != nil {
 		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+	if ValidateJoinToken == nil || !ValidateJoinToken(req.Token) {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 	addr := normalizeAddrFromReq(req.Addr, r.RemoteAddr)

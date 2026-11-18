@@ -129,6 +129,7 @@ func main() {
 			log.Fatal("[HoneyMesh] Join requires -t <token>")
 		}
 		loadConfig()
+		initNodeIdentity()
 		performJoin(*joinUrlFlag, *joinTokenFlag)
 		return
 	}
