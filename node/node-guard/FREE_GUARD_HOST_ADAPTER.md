@@ -1,0 +1,9 @@
+# Optional Node Guard Free to Node Pro host bridge
+
+This development candidate connects the separate free application SDK to the free Node agent. It is **not** in the signed customer bundle. The free SDK continues to observe and apply local app limits when the agent is absent. Enabling this adapter does not grant host authority: the local HoneyMesh agent validates the signed app request, Linux peer UID, source policy, mode, and TTL before applying a UEE/XDP grant.
+
+The adapter accepts only a v2 decision for a single configured application and policy with `identity_scope: source_ip`. It rejects subject, tenant, and API-key decisions because a shared identity restriction does not justify blocking an entire source address. It also rejects ineligible or protected sources, unsupported reason codes, missing expiry, stale or future observations, and a free restriction with fewer than 60 seconds remaining. The decision's restriction window cannot exceed the free engine's five-minute ceiling. Host TTL is at most the remaining free restriction time and 300 seconds. A decision is deduplicated while its forwarded host TTL remains active. Agent failure returns `agent_unavailable` for local audit and does not change the free app restriction.
+
+Use a Node Guard v2 policy with an explicit trusted source and `onDecision`. Construct `createAgentBridge` with the registered app's own Unix socket, app ID, and secret. Set `enabled: true` only after agent installation, recovery, and protected-source configuration have been reviewed. Keep the secret in a private file owned by the app UID; never place it in browser code or the free policy JSON.
+
+The final product gate requires the exact newly signed package on a fresh VM with two real app UIDs, wrong-ID and wrong-UID negatives, source and control traffic, XDP counters, grant ownership, expiry, restart, and rollback. Source-level tests here do not close that gate.

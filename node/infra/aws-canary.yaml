@@ -1,0 +1,173 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Temporary dual stack EC2 client for HoneyMesh.io public canary, isolated in its own VPC and auto terminating after four hours.
+Metadata:
+  AWSToolsMetrics:
+    AWSAgentToolkit: aws-cloudformation@3
+  com.aws.cloudformation.Context:
+    arch: One short lived SSM managed test client in an isolated dual stack public subnet.
+    must:
+      - No inbound security group access.
+      - The instance is a test source only and must be deleted after the canary.
+      - Do not place application secrets or production data on this instance.
+Parameters:
+  LatestAmi:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64
+    Description: AWS managed latest Amazon Linux 2023 ARM64 AMI parameter.
+Resources:
+  Vpc:
+    Type: AWS::EC2::VPC
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Isolates the disposable dual stack test path from existing account networks.
+        must: [Delete with the canary stack after the test.]
+    Properties:
+      CidrBlock: 10.77.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Purpose
+          Value: honeymesh-public-canary
+  VpcIpv6:
+    Type: AWS::EC2::VPCCidrBlock
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Gives the disposable client an independent public IPv6 path.
+        must: [Keep the VPC separate from production networks.]
+    Properties:
+      VpcId: !Ref Vpc
+      AmazonProvidedIpv6CidrBlock: true
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Purpose
+          Value: honeymesh-public-canary
+  GatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Vpc
+      InternetGatewayId: !Ref InternetGateway
+  Subnet:
+    Type: AWS::EC2::Subnet
+    DependsOn: VpcIpv6
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Carries one public IPv4 and IPv6 client without changing the default VPC.
+        must: [Only the disposable test instance may be placed here.]
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.77.1.0/24
+      Ipv6CidrBlock: !Select
+        - 0
+        - !Cidr
+          - !Select [0, !GetAtt Vpc.Ipv6CidrBlocks]
+          - 1
+          - 64
+      AssignIpv6AddressOnCreation: true
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Purpose
+          Value: honeymesh-public-canary
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+  RouteAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref Subnet
+  RouteV4:
+    Type: AWS::EC2::Route
+    DependsOn: GatewayAttachment
+    Properties:
+      RouteTableId: !Ref RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  RouteV6:
+    Type: AWS::EC2::Route
+    DependsOn: GatewayAttachment
+    Properties:
+      RouteTableId: !Ref RouteTable
+      DestinationIpv6CidrBlock: ::/0
+      GatewayId: !Ref InternetGateway
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: The client initiates probes and receives management through SSM, so inbound ports are unnecessary.
+        must: [Never add public ingress for this canary.]
+    Properties:
+      GroupDescription: Outbound-only HoneyMesh canary client
+      VpcId: !Ref Vpc
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+          Description: IPv4 probes and SSM control
+        - IpProtocol: '-1'
+          CidrIpv6: ::/0
+          Description: IPv6 probes
+  SsmRole:
+    Type: AWS::IAM::Role
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Grants only Systems Manager managed-instance access so the VM needs no SSH port or key.
+        must: [Do not attach application or Marketplace permissions.]
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: ec2.amazonaws.com}
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+  SsmProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles: [!Ref SsmRole]
+  CanaryInstance:
+    Type: AWS::EC2::Instance
+    DependsOn: [RouteV4, RouteV6]
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Small ARM64 client sends bounded test probes; self termination limits accidental spend.
+        must:
+          - Keep inbound security group empty and IMDSv2 required.
+          - Keep the root disk encrypted and deleted with the instance.
+          - Delete the stack after evidence capture even if the instance auto terminates.
+    Properties:
+      ImageId: !Ref LatestAmi
+      InstanceType: t4g.nano
+      CreditSpecification: {CPUCredits: standard}
+      IamInstanceProfile: !Ref SsmProfile
+      SubnetId: !Ref Subnet
+      SecurityGroupIds: [!Ref SecurityGroup]
+      Ipv6AddressCount: 1
+      MetadataOptions:
+        HttpTokens: required
+        HttpEndpoint: enabled
+      InstanceInitiatedShutdownBehavior: terminate
+      UserData: !Base64 |
+        #!/bin/bash
+        shutdown -h +240
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+            VolumeType: gp3
+            Encrypted: true
+            DeleteOnTermination: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-test-client'
+        - Key: Purpose
+          Value: honeymesh-public-canary
+Outputs:
+  InstanceId:
+    Description: Disposable SSM managed test client.
+    Value: !Ref CanaryInstance
+  PublicIpv4:
+    Description: Public IPv4 source address; recheck from inside the VM before the canary.
+    Value: !GetAtt CanaryInstance.PublicIp

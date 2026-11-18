@@ -1,0 +1,28 @@
+HoneyMesh Multi-License Summary
+
+This repository is multi-licensed by component:
+
+1) eBPF Kernel Program Code (Dual BSD/GPL)
+   - Scope: agent/bpf/main.c, agent/bpf/ directory, and generated artifacts
+     (e.g., bpf_*.go, bpf_*.o) that embed or derive from the eBPF code.
+   - License: Dual BSD-2-Clause OR GPL-2.0-only (your choice).
+   - Texts: LICENSES/BSD-2-Clause.txt and LICENSES/GPL-2.0-only.txt
+
+2) User-Space Components (Apache-2.0)
+   - Scope: Go source in agent/ outside agent/bpf/, Node Guard source in
+     node-guard/, agentbridge/, integration code, and other user-space code.
+   - License: Apache-2.0
+   - Text: LICENSES/Apache-2.0.txt
+
+3) Configs / Scripts / Tests (Apache-2.0)
+   - Scope: configuration files, scripts, and tests.
+   - License: Apache-2.0
+   - Text: LICENSES/Apache-2.0.txt
+
+4) Documentation (CC-BY-4.0)
+   - Scope: Markdown documentation and other original project docs.
+   - License: Creative Commons Attribution 4.0 International
+   - Text: LICENSES/CC-BY-4.0.txt
+
+If a file does not clearly fall into a category above, treat it as
+User-Space Components under Apache-2.0 by default.

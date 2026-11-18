@@ -1,0 +1,14 @@
+{
+  "name": "@honeymesh/node-guard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.mjs"
+    }
+  },
+  "engines": { "node": ">=20" },
+  "scripts": { "test": "node --test" }
+}

@@ -1,0 +1,36 @@
+{
+  "name": "nettools-cloud",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test:discovery": "node scripts/test-discovery.mjs",
+    "test:bootstrap": "node --test scripts/test-bootstrap-entitlement.mjs scripts/test-bootstrap-limits.mjs",
+    "test:protocol": "node --test scripts/test-protocol-v1.mjs",
+    "test:edge-guard": "node scripts/test-edge-guard.mjs",
+    "test:activity": "node scripts/test-activity.mjs",
+    "test:network-admin": "node scripts/test-network-admin.mjs",
+    "backup": "node scripts/backup-exchange.mjs"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.8.0",
+    "next": "^16.4.6",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "^16.4.6",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

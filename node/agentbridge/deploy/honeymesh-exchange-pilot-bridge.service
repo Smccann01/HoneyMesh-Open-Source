@@ -1,0 +1,31 @@
+[Unit]
+Description=HoneyMesh Exchange observe-only agent bridge pilot
+After=honeymesh.service
+Wants=honeymesh.service
+
+[Service]
+Type=exec
+User=honeymesh
+Group=honeymesh-edge
+SupplementaryGroups=honeymesh
+RuntimeDirectory=honeymesh-edge
+RuntimeDirectoryMode=0770
+Environment=HM_BRIDGE_SOCKET=/run/honeymesh-edge/edge.sock
+Environment=HM_BRIDGE_SECRET_FILE=/etc/honeymesh-edge/secret
+Environment=HM_AGENT_STATE_FILE=/var/lib/honeymesh/runtime-state.json
+Environment=HM_AGENT_CA_FILE=/etc/honeymesh/certs/ca/ca.crt
+ExecStart=/opt/honeymesh-node-bridge/bin/exchange-pilot-bridge
+Restart=on-failure
+RestartSec=5s
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/run/honeymesh-edge
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_NETLINK
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

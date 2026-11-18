@@ -1,0 +1,9 @@
+{
+  "name": "honeymesh-node-reference-service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "dependencies": { "@honeymesh/node-guard": "file:../../node-guard" },
+  "scripts": { "test": "node --test", "start": "node server.mjs" }
+}

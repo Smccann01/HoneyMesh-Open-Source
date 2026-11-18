@@ -1,0 +1,22 @@
+# Local credentials, certificates, and runtime data
+.env
+.env.*
+*.key
+*.pem
+*.p12
+*.pfx
+*.db
+*.sqlite
+*.sqlite3
+honeymesh.json
+license.json
+cluster.id
+
+# Local builds and logs
+/dist/
+/build/
+/releases/
+*.deb
+*.rpm
+*.log
+__pycache__/

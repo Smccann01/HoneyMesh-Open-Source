@@ -1,0 +1,30 @@
+[Unit]
+Description=Network Decode Firewall local console
+After=network-online.target honeymesh.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=networkdecode
+Group=networkdecode
+WorkingDirectory=/opt/network-decode-firewall/current
+Environment=HM_CONSOLE_STATE_DIR=/var/lib/network-decode-firewall
+Environment=HM_HOST_ACTIONS_ENABLED=0
+ExecStart=/usr/bin/node /opt/network-decode-firewall/current/src/server.mjs
+Restart=on-failure
+RestartSec=3s
+StateDirectory=network-decode-firewall
+StateDirectoryMode=0700
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ProtectControlGroups=yes
+ProtectKernelModules=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

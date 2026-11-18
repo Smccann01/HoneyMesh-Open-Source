@@ -1,0 +1,132 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #0a0e16;
+  --panel: #121825;
+  --panel-2: #182133;
+  --fg: #f5f7fb;
+  --muted: #9eb0c7;
+  --gold: #f2b84b;
+  --orange: #ff8c42;
+  --line: rgba(255, 255, 255, 0.12);
+  --good: #5fd7a3;
+  --warn: #ffcd57;
+  --bad: #ff6b6b;
+  --font-sans: "IBM Plex Sans", "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", monospace;
+}
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--fg);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background:
+    radial-gradient(circle at top, rgba(242, 184, 75, 0.14), transparent 32%),
+    radial-gradient(circle at 80% 0%, rgba(95, 215, 163, 0.12), transparent 24%),
+    linear-gradient(180deg, #0a0e16 0%, #0d1320 42%, #0f1624 100%);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.portal-shell {
+  min-height: 100vh;
+}
+
+.glass {
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(18, 24, 37, 0.95), rgba(11, 16, 27, 0.92));
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+}
+
+.card {
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(24, 33, 51, 0.88), rgba(18, 24, 37, 0.88));
+}
+
+.pill {
+  border: 1px solid rgba(242, 184, 75, 0.28);
+  background: rgba(242, 184, 75, 0.08);
+}
+
+.metric-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.status-online { color: var(--good); }
+.status-degraded { color: var(--warn); }
+.status-offline { color: var(--bad); }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 0.85rem 0.9rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+input, select, textarea, button {
+  font: inherit;
+}
+
+input, select, textarea {
+  width: 100%;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(8, 12, 20, 0.88);
+  color: var(--fg);
+  padding: 0.8rem 0.95rem;
+}
+
+button, .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(242, 184, 75, 0.32);
+  background: linear-gradient(180deg, rgba(242, 184, 75, 0.18), rgba(255, 140, 66, 0.14));
+  color: var(--fg);
+  padding: 0.8rem 1.2rem;
+  cursor: pointer;
+  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+button:hover, .button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(242, 184, 75, 0.6);
+}
+
+.button-secondary {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.16);
+}

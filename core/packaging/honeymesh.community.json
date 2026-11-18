@@ -1,0 +1,26 @@
+{
+  "node_name": "honeymesh-node",
+  "bind_ip": "127.0.0.1",
+  "web_port": "8443",
+  "ui_mode": "web",
+  "mesh_port": "9000",
+  "mesh_secret": "",
+  "interfaces": [],
+  "traps": {},
+  "admin_token": "",
+  "max_trap_concurrency": 1024,
+  "license_tier": "community",
+  "marketplace": { "refresh_url": "", "node_token": "" },
+  "trusted_network_sharing_enabled": false,
+  "trusted_mesh_network_enabled": false,
+  "mesh": { "peers": [], "trusted_networks": [], "tls": { "cert_file": "", "key_file": "", "peer_ca_file": "", "client_ca_file": "" } },
+  "exchange": { "enabled": false, "base_url": "https://nettools.cloud" },
+  "security": {
+    "ca_cert": "certs/ca/ca.crt",
+    "cert_file": "certs/node/node.crt",
+    "key_file": "certs/node/node.key",
+    "allowlist_base": true,
+    "automatic_ban_ttl_seconds": 900
+  },
+  "geo_policy": { "enabled": false }
+}

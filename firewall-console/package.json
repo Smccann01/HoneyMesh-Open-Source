@@ -1,0 +1,24 @@
+{
+  "name": "network-decode-firewall-console",
+  "version": "0.2.1-beta.9",
+  "private": true,
+  "description": "Local Network Decode Firewall operator console",
+  "files": [
+    "src/",
+    "scripts/send-webhook.mjs",
+    "README.md"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.mjs",
+    "start:enforce": "LAB_ENFORCE=1 node src/server.mjs",
+    "send:webhook": "node scripts/send-webhook.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@network-decode/node-guard": "0.2.0-alpha.11"
+  }
+}
