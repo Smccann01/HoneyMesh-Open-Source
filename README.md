@@ -1,5 +1,7 @@
 # HoneyMesh open source
 
+**HoneyMesh 2.0 development branch.** Adaptive Trust source and tests are developed here. This branch is not an installable release; its current-line package build is disabled. Read the [2.0 versioning rules](HONEYMESH_2_0_VERSIONING.md). The existing pilot release and its installer remain on `main`.
+
 HoneyMesh provides defensive tools for existing servers. This public repository contains the Core agent, Node agent and Node Guard SDK, self-hosted Exchange, and Firewall Console source. Network Decode maintains its website and operational records in separate private projects.
 
 | Directory | Component | License |
