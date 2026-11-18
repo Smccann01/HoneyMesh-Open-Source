@@ -191,6 +191,19 @@ try {
   assert.deepEqual(approvedSnapshot.data.records.map((item) => item.attackerIp).sort(), ["1.1.1.1", "8.8.8.8"]);
   assert.equal(approvedSnapshot.data.records.every((item) => item.ttl > 0 && item.ttl <= 300), true);
   verifyReceivingGoClient(["1.1.1.1", "8.8.8.8"], false);
+  const expiredSignalId = randomUUID();
+  const expiredSeen = new Date(Date.now() - 310_000).toISOString();
+  db.prepare(`INSERT INTO bans (id, source_type, tenant_id, node_id, attacker_ip, cidr, ja4, ja3_legacy,
+    attack_type, protocol, port, service, confidence, reason, first_seen, last_seen, ttl, status,
+    evidence_hash, trust_score_at_submission, publisher, source_channel, action_taken, mode)
+    VALUES (?, 'honeymesh_node', ?, ?, '9.9.9.9', NULL, '', '', 'probe', 'tcp', 80, 'http',
+    95, 'expired signal', ?, ?, 300, 'approved', ?, 95, 'beta', 'local', 'temporary_ban', 'audit_only')`)
+    .run(expiredSignalId, beta.tenantId, beta.id, expiredSeen, expiredSeen, randomUUID());
+  assert.equal((await call(alpha, "GET", feedPath)).data.mergedFeed.some((item) => item.id === expiredSignalId), false,
+    "expired cross-cluster signal must not enter the feed");
+  assert.equal((await call(alpha, "GET", "/api/hm/attack-snapshot?trustThreshold=50")).data.records.some((item) => item.id === expiredSignalId), false,
+    "expired cross-cluster signal must not enter a complete snapshot");
+  db.prepare("DELETE FROM bans WHERE id = ?").run(expiredSignalId);
   assert.equal((await call(alpha, "GET", "/api/hm/attack-snapshot?trustThreshold=invalid")).status, 400);
   assert.equal((await call(beta, "POST", `/api/hm/discovery/signals/${publicSignalId}/retract`, {}, true)).status, 200);
   const afterRetractionSnapshot = await call(alpha, "GET", "/api/hm/attack-snapshot?trustThreshold=50");

@@ -1,9 +1,9 @@
 # HoneyMesh Operator Manual
 
-Date: 2026-04-07
-Version: v2.3.6-rc1-Iron-Hive
+Date: 2026-11-18
+Version: v2.3.6-rc4-corefirewall4 pilot
 
-This manual covers the current HoneyMesh operator workflow for local protection, Pro licensing, HoneyMesh Exchange connectivity, trusted mesh discovery, per-network trust, temporary join tokens, and day-to-day administration.
+This manual covers the HoneyMesh operator workflow for local protection, self-hosted Exchange connectivity, trusted mesh discovery, per-network trust, temporary join tokens, and day-to-day administration. The software is free and does not require a commercial license key.
 
 ---
 
@@ -41,7 +41,7 @@ Installed package layout:
 
 Common local files used at runtime:
 
-- License file: `license.json`
+- Legacy license file from older installations: `license.json` (not required for free operation)
 - Cluster identity: `cluster.id`
 - Mesh signing identity: `identity.key`
 
@@ -52,20 +52,17 @@ Common local files used at runtime:
 Build from source:
 
 ```bash
-cd /path/to/HoneyMesh-2.3.6-rc1
+cd /path/to/HoneyMesh-Open-Source/node/agent
 GOTOOLCHAIN=go1.26.10 go build -o honeymesh .
 ```
 
-Run from source:
+The source build creates a local binary. The service commands below apply after package installation.
+
+Install the Ubuntu 24.04 AMD64 pilot package after downloading it with `SHA256SUMS` from the [pilot release](https://github.com/Smccann01/HoneyMesh-Open-Source/releases/tag/v2.3.6-rc4-pilot.1). This candidate is for noncritical hosts with console recovery access; [release readiness](../../RELEASE_READINESS.md) lists the remaining qualification work.
 
 ```bash
-sudo systemctl start honeymesh.service
-```
-
-Install the current Debian package:
-
-```bash
-sudo dpkg -i /path/to/honeymesh_2.3.6-rc1-Iron-Hive_amd64.deb
+sha256sum -c SHA256SUMS
+sudo dpkg -i ./honeymesh_2.3.6-rc4-corefirewall4_amd64.deb
 ```
 
 The package installs a Community configuration bound to `127.0.0.1`, with no interfaces or traps selected and sharing disabled. On a systemd host, a fresh install starts the service. Edit `/etc/honeymesh/honeymesh.json` to choose the interfaces and traps you intend to protect, then run `sudo systemctl restart honeymesh.service`; the service detects the operator config change and applies those selections. The configuration is root-owned and readable by the `honeymesh` service group. The first start saves a unique admin token in `/var/lib/honeymesh/runtime-state.json`. The installer generates local TLS certificates per machine; for remote dashboard access or trusted mesh, configure certificates and CA trust for the actual network names and addresses. Never copy another node's private key or live configuration into an installation package.
@@ -76,10 +73,10 @@ Run the packaged service:
 sudo systemctl enable --now honeymesh.service
 ```
 
-Startup banner:
+Verify the packaged service:
 
-```text
-🍯  Honey Mesh v2.3.6-rc1-Iron-Hive Active
+```bash
+systemctl is-active honeymesh.service
 ```
 
 Generate a temporary trusted mesh invite token:
@@ -97,15 +94,15 @@ sudo runuser -u honeymesh -- /usr/bin/honeymesh -config /etc/honeymesh/honeymesh
 Manual exchange enrollment flow:
 
 ```bash
-sudo runuser -u honeymesh -- /usr/bin/honeymesh -config /etc/honeymesh/honeymesh.json -state-dir /var/lib/honeymesh -register-exchange https://nettools.cloud -enroll-token <ENROLL_TOKEN>
+sudo runuser -u honeymesh -- /usr/bin/honeymesh -config /etc/honeymesh/honeymesh.json -state-dir /var/lib/honeymesh -register-exchange https://<YOUR_EXCHANGE_HOST> -enroll-token <ENROLL_TOKEN>
 ```
 
 Current recommended operator flow:
 
-- Upload a valid Pro `license.json` in the app.
-- Open `TRUSTED PEERS`.
-- Enable `NetTools.cloud Sharing`.
-- HoneyMesh bootstraps against the live exchange and stores its exchange credentials automatically.
+- Start on a noncritical host with no protected interfaces and sharing disabled.
+- Verify the local service, admin token, and recovery path.
+- Set up a self-hosted Exchange or direct mesh only when you are ready to opt in.
+- Approve peers explicitly and keep local enforcement decisions under your control.
 
 Uninstall:
 
@@ -138,23 +135,15 @@ Behavior:
 
 ---
 
-**5. Licensing And Feature Gates**
+**5. Free Operation And Sharing Controls**
 
-License tiers:
+All published HoneyMesh software is free. Local protection, the dashboard, self-hosted Exchange, and trusted mesh participation do not require a purchased license. Older configurations and APIs may still show `COMMUNITY` or `PRO` labels for compatibility; they do not create a paywall in the open-source build.
 
-- `COMMUNITY`: Free local ENFORCE/LOCKDOWN protection, local dashboard and analytics, and optional admin-token enrollment in a self-hosted Exchange observation feed.
-- `PRO`: Community features plus premium dashboard controls, HoneyMesh Exchange opt-in, trusted mesh participation, and shared defense features.
-
-Important behavior:
-
-- Sharing features are off by default.
-- Operators must explicitly enable them.
-- A Pro license becoming invalid disables legacy trusted mesh participation. An explicitly opted-in self-hosted Exchange connection remains available.
-- HoneyMesh validates the signed license locally before enabling Pro-only capabilities.
+Sharing is off by default. Operators must explicitly opt in, configure TLS trust, approve peers, and set local enforcement policy.
 
 Current shared-defense model:
 
-- `NetTools.cloud Sharing` is the in-app toggle that enables HoneyMesh Exchange integration.
+- The Exchange sharing control enables an explicitly configured Exchange connection. Some older UI text may still say `NetTools.cloud Sharing`.
 - HoneyMesh Exchange is used to discover cluster IDs and receive curated/shared attack intelligence.
 - `Trusted Mesh Networks` is a separate control for direct peer federation.
 - Exchange discovery does not automatically trust another network.
@@ -334,7 +323,7 @@ This is now the main shared-defense control surface.
 
 Sections include:
 
-- `Enable NetTools.cloud Sharing`
+- Exchange sharing control (older UI builds label this `Enable NetTools.cloud Sharing`)
 - `HoneyMesh Exchange Trust`
 - `Enable Trusted Mesh Participation`
 - `Temporary Mesh Invite`
@@ -528,11 +517,11 @@ Headers:
 Startup problems:
 
 - `failed to raise memlock limit`: run as root or raise memlock.
-- `license invalid` or `license expired`: HoneyMesh falls back to Community mode and disables Pro-only shared defense features.
+- An older license file is not needed for the free build. If a legacy license warning appears, inspect the installed version and configuration.
 
 Exchange toggle fails:
 
-- Check that the node has a valid Pro license.
+- Check that Exchange sharing is explicitly enabled and the self-hosted Exchange URL is correct.
 - Confirm outbound HTTPS reachability to the configured Exchange host.
 - Check the exact error shown in the `TRUSTED PEERS` modal.
 - If bootstrap fails, HoneyMesh now surfaces the backend error directly instead of a generic save failure.
@@ -550,7 +539,7 @@ No discovered networks:
 
 Trusted mesh join issues:
 
-- Verify Pro mode.
+- Verify that trusted mesh participation is enabled and TLS trust is configured.
 - Verify `trusted_mesh_network_enabled` is on.
 - Verify peer reachability and certificate trust.
 - Verify the invite token is still valid.
