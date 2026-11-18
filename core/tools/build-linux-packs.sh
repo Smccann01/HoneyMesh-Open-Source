@@ -13,6 +13,8 @@ trap cleanup EXIT
 
 cd "$ROOT_DIR"
 export GOTOOLCHAIN=go1.26.10
+SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git -C "$ROOT_DIR" log -1 --format=%ct -- . 2>/dev/null || date +%s)}"
+export SOURCE_DATE_EPOCH
 if [[ "$(go version)" != go\ version\ go1.26.10\ * ]]; then
   echo "ERROR: release build requires Go 1.26.10" >&2
   exit 1
@@ -62,7 +64,7 @@ build_one() {
   local tar_out="$DIST_DIR/${root_name}.tar.gz"
 
   echo "[build] linux/${goarch} binary"
-  GOOS=linux GOARCH="$goarch" CGO_ENABLED=0 go build -o "$bin" ./
+  GOOS=linux GOARCH="$goarch" CGO_ENABLED=0 go build -trimpath -buildvcs=false -ldflags=-buildid= -o "$bin" ./
 
   rm -rf "$stage"
   mkdir -p \
@@ -190,6 +192,9 @@ fi
 POSTRM
   chmod 0755 "$stage/DEBIAN/postrm"
 
+  # Package tools otherwise record the build clock and staging-directory mtimes.
+  find "$stage" -exec touch -h -d "@$SOURCE_DATE_EPOCH" {} +
+
   if has_cmd dpkg-deb; then
     echo "[pack] $deb_out"
     dpkg-deb --root-owner-group --build "$stage" "$deb_out" >/dev/null
@@ -245,7 +250,7 @@ INSTALL
   chmod 0755 "$tar_stage/install.sh"
 
   echo "[pack] $tar_out"
-  (cd "$TMP_DIR" && tar --owner=0 --group=0 --numeric-owner -czf "$tar_out" "$root_name")
+  (cd "$TMP_DIR" && tar --sort=name --mtime="@$SOURCE_DATE_EPOCH" --owner=0 --group=0 --numeric-owner -cf - "$root_name" | gzip -n > "$tar_out")
   if tar --numeric-owner -tvf "$tar_out" | awk '$2 != "0/0" { bad = 1 } END { exit !bad }'; then
     echo "ERROR: tar package contains a non-root-owned entry" >&2
     exit 1
@@ -366,6 +371,8 @@ SPEC
     rpmbuild \
       --define "_topdir $rpm_top" \
       --define "_rpmdir $rpm_out" \
+      --define "use_source_date_epoch_as_buildtime 1" \
+      --define "clamp_mtime_to_source_date_epoch 1" \
       --define "__strip /bin/true" \
       --define "__objdump /bin/true" \
       --target "$rpmarch" \
