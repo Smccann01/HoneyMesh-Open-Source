@@ -31,7 +31,8 @@ jobs:
           diff -u \
             <(cd dist/candidate-a && find . -type f -print0 | sort -z | xargs -0 sha256sum) \
             <(cd dist/candidate-b && find . -type f -print0 | sort -z | xargs -0 sha256sum)
-          (cd dist/candidate-a && find . -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
+          (cd dist/candidate-a && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
+          (cd dist/candidate-a && sha256sum -c SHA256SUMS)
       - name: Attest candidate packages and checksum manifest
         uses: actions/attest@v4
         with:
