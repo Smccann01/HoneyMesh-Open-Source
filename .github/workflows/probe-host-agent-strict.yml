@@ -233,6 +233,38 @@ jobs:
             exit 1
           fi
           echo 'SERVICE_PROBE=explicit_start_and_detach_on_stop'
+      - name: Diagnose whether kernel BTF permission is required
+        env:
+          SNAP_NAME: ${{ matrix.snap_name }}
+        run: |
+          set -eu
+          sudo snap disconnect "$SNAP_NAME:kernel-btf"
+          sudo timeout --signal=TERM --kill-after=5s 18s snap run "$SNAP_NAME" > no-btf-probe.log 2>&1 &
+          probe_pid=$!
+          attached=0
+          for attempt in $(seq 1 12); do
+            if sudo ip -details link show hm-strict-test | grep -q 'prog/xdp'; then
+              attached=1
+              break
+            fi
+            if ! kill -0 "$probe_pid" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          wait "$probe_pid" || true
+          sudo snap connect "$SNAP_NAME:kernel-btf"
+          if sudo ip -details link show hm-strict-test | grep -q 'prog/xdp'; then
+            echo 'BTF_PROBE=xdp_remained_attached_after_exit' >&2
+            exit 1
+          fi
+          if [ "$attached" -eq 1 ]; then
+            echo 'BTF_PROBE=attached_without_kernel_btf_plug'
+          else
+            echo 'BTF_PROBE=failed_without_kernel_btf_plug'
+            grep -Ei 'btf|permission|denied|bpf|attach' no-btf-probe.log | tail -20 || true
+            sudo journalctl -k --no-pager -n 100 | grep "snap.$SNAP_NAME" | grep 'DENIED' | tail -10 || true
+          fi
       - name: Probe snapshot restore after normal removal
         env:
           SNAP_FILE: ${{ steps.build.outputs.snap }}
