@@ -2,9 +2,10 @@
 
 These packages are **not** in the Ubuntu App Center. They are developer
 candidates for the two XDP host agents. The CI builds each Snap, checks its
-checksum, installs it in devmode, creates unique local state, and verifies that
-the Community configuration has no selected interfaces or sharing. It does
-not claim that kernel attachment or enforcement works under strict confinement.
+checksum, installs it in devmode, creates unique local state, verifies that
+the Community configuration has no selected interfaces or sharing, and probes
+XDP attach/detach on an isolated veth pair. Passing these tests does not
+establish that enforcement works under strict confinement.
 
 Each candidate must be installed with `--devmode --dangerous` from a CI
 artifact, on a disposable Ubuntu 24.04 AMD64 host only. Neither package starts
@@ -16,8 +17,8 @@ interface for an unqualified test.
 
 Qualification before a Store beta:
 
-1. Run an isolated veth XDP attach, map update, detach, crash, restart, and
-   uninstall test on a disposable host. Record actual kernel and snapd logs.
+1. Extend the isolated veth test to map update, crash, restart, and uninstall
+   on a disposable host. Record actual kernel and snapd logs.
 2. Resolve required BPF access under an approved Snap confinement model.
    Devmode is diagnostic and is not a release confinement model. Classic
    confinement requires Canonical review.
