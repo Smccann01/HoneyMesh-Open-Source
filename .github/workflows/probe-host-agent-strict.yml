@@ -40,7 +40,7 @@ jobs:
           SNAP_NAME: ${{ matrix.snap_name }}
         run: |
           sudo snap install --dangerous "$SNAP_FILE"
-          for plug in network-control mount-observe system-trace firewall-control; do
+          for plug in network-control mount-observe system-trace firewall-control kernel-btf; do
             sudo snap connect "$SNAP_NAME:$plug" || true
           done
           sudo snap run "$SNAP_NAME.init"
