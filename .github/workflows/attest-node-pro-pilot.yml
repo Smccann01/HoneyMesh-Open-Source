@@ -35,8 +35,9 @@ jobs:
           diff -u \
             <(cd "$RUNNER_TEMP/node-pro-a" && find . -type f -print0 | sort -z | xargs -0 sha256sum) \
             <(cd "$RUNNER_TEMP/node-pro-b" && find . -type f -print0 | sort -z | xargs -0 sha256sum)
-          (cd "$RUNNER_TEMP/node-pro-a" && find . -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
-          (cd "$RUNNER_TEMP/node-pro-a" && sha256sum -c SHA256SUMS)
+          (cd "$RUNNER_TEMP/node-pro-a" && find . -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS-all)
+          (cd "$RUNNER_TEMP/node-pro-a" && sha256sum honeymesh_2.3.7-rc1-nodepro1_amd64.deb > SHA256SUMS)
+          (cd "$RUNNER_TEMP/node-pro-a" && sha256sum -c SHA256SUMS-all && sha256sum -c SHA256SUMS)
       - name: Attest packages and checksum manifest
         uses: actions/attest@v4
         with:
