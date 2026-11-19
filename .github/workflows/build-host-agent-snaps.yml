@@ -36,6 +36,9 @@ jobs:
           SNAP_NAME: ${{ matrix.snap_name }}
         run: |
           sudo snap install --devmode --dangerous "$SNAP_FILE"
+          services=$(sudo snap services "$SNAP_NAME")
+          echo "$services"
+          echo "$services" | grep -q 'disabled.*inactive'
           sudo snap run "$SNAP_NAME.init"
           sudo python3 - "$SNAP_NAME" <<'PY'
           import json, pathlib, stat, sys

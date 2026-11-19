@@ -184,6 +184,37 @@ jobs:
           fi
           sudo python3 .github/scripts/host-agent-lifecycle-probe.py state "$SNAP_NAME"
           echo 'REFRESH_REVERT_PROBE=private_state_preserved'
+      - name: Probe explicitly enabled service and stop recovery
+        env:
+          SNAP_NAME: ${{ matrix.snap_name }}
+        run: |
+          set -eu
+          services=$(sudo snap services "$SNAP_NAME")
+          echo "$services"
+          echo "$services" | grep -q 'disabled.*inactive'
+          sudo snap start --enable "$SNAP_NAME"
+          attached=0
+          for attempt in $(seq 1 15); do
+            if sudo ip -details link show hm-strict-test | grep -q 'prog/xdp'; then
+              attached=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$attached" -ne 1 ]; then
+            sudo snap logs "$SNAP_NAME" -n 50 || true
+            exit 1
+          fi
+          sudo python3 .github/scripts/host-agent-lifecycle-probe.py after "$SNAP_NAME"
+          sudo snap stop --disable "$SNAP_NAME"
+          services=$(sudo snap services "$SNAP_NAME")
+          echo "$services"
+          echo "$services" | grep -q 'disabled.*inactive'
+          if sudo ip -details link show hm-strict-test | grep -q 'prog/xdp'; then
+            echo 'SERVICE_PROBE=xdp_remained_attached_after_stop' >&2
+            exit 1
+          fi
+          echo 'SERVICE_PROBE=explicit_start_and_detach_on_stop'
       - name: Purge Snap and verify cleanup
         env:
           SNAP_NAME: ${{ matrix.snap_name }}
