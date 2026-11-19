@@ -156,6 +156,34 @@ jobs:
             exit 1
           fi
           echo 'RESTART_PROBE=state_preserved_and_detached'
+      - name: Probe local refresh and revert state
+        env:
+          SNAP_FILE: ${{ steps.build.outputs.snap }}
+          SNAP_NAME: ${{ matrix.snap_name }}
+        run: |
+          set -eu
+          snap_root="$RUNNER_TEMP/$SNAP_NAME-refresh-root"
+          mkdir -p "$snap_root"
+          unsquashfs -quiet -dest "$snap_root" "$SNAP_FILE"
+          python3 - "$snap_root/meta/snap.yaml" <<'PY'
+          import pathlib, re, sys
+          path = pathlib.Path(sys.argv[1])
+          source = path.read_text()
+          changed, count = re.subn(r'(?m)^version: ([^\n]+)$', r'version: \1-ci1', source, count=1)
+          assert count == 1, 'could not locate Snap version'
+          path.write_text(changed)
+          PY
+          snap pack "$snap_root" "$RUNNER_TEMP" --filename "$SNAP_NAME-refresh.snap"
+          sudo snap install --dangerous "$RUNNER_TEMP/$SNAP_NAME-refresh.snap"
+          snap list "$SNAP_NAME" | grep -q -- '-ci1'
+          sudo python3 .github/scripts/host-agent-lifecycle-probe.py state "$SNAP_NAME"
+          sudo snap revert "$SNAP_NAME"
+          if snap list "$SNAP_NAME" | grep -q -- '-ci1'; then
+            echo 'REVERT_PROBE=wrong_revision' >&2
+            exit 1
+          fi
+          sudo python3 .github/scripts/host-agent-lifecycle-probe.py state "$SNAP_NAME"
+          echo 'REFRESH_REVERT_PROBE=private_state_preserved'
       - name: Purge Snap and verify cleanup
         env:
           SNAP_NAME: ${{ matrix.snap_name }}

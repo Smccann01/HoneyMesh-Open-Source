@@ -10,7 +10,7 @@ import urllib.request
 
 
 phase, snap_name = sys.argv[1:]
-assert phase in ("before", "after")
+assert phase in ("before", "after", "state")
 root = pathlib.Path("/var/snap") / snap_name / "common"
 config_file = root / "honeymesh.json"
 key_file = root / "certs/node/node.key"
@@ -34,6 +34,7 @@ if phase == "before":
     record_file.write_text(json.dumps(fingerprints))
 else:
     assert fingerprints == json.loads(record_file.read_text()), "private state changed across crash/restart"
+if phase == "after":
     request = urllib.request.Request(
         "https://127.0.0.1:8443/api/mode", headers={"X-Honey-Token": token}
     )
