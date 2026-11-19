@@ -6,7 +6,10 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 umask 077
 state=${SNAP_COMMON:?SNAP_COMMON is required}
-install -d -m 0700 "$state"
+if [ ! -d "$state" ] || [ -L "$state" ]; then
+  echo 'Snap common state directory is missing or unsafe' >&2
+  exit 1
+fi
 if [ -L "$state/honeymesh.json" ]; then
   echo 'Refusing a symlinked configuration' >&2
   exit 1
