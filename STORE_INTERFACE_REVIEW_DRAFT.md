@@ -29,6 +29,10 @@ lifecycle test killed the process, verified detach, restarted with the same
 private state, installed a locally repacked revision with the same executable,
 reverted it, and purged the Snap. These are local diagnostics, not a tested
 application-version migration, Store review, or production qualification.
+Another isolated run confirmed that a second process of the same Snap cannot
+replace an attached XDP program, and that normal removal followed by reinstall
+and Snap snapshot restore preserves private state without starting protection.
+An installed `.deb` agent conflict has not yet been tested.
 
 The current [system-files interface documentation](https://snapcraft.io/docs/reference/interfaces/system-files-interface/)
 says Store acceptance excludes non-owned `/sys` paths. The kernel BTF files
@@ -52,9 +56,11 @@ are **not** asking for an exception through `system-files` without guidance.
 - [Snap recipes and operator boundary](https://github.com/Smccann01/HoneyMesh-Open-Source/blob/main/HOST_AGENT_SNAP_PILOT.md)
 - [Strict packet-level test](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44621989489)
 - [Crash, restart, local revision revert, and purge test](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44627883020)
+- [Second-process conflict and snapshot restore test](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44630382291)
 - [Release gate issue](https://github.com/Smccann01/HoneyMesh-Open-Source/issues/31)
 
 We will keep the Snaps in developer testing until the Store permission route,
-refresh/revert behavior, conflict handling, and operator recovery have been
-qualified. We can provide the exact denial logs and a minimal reproducer to
+real application-version migration, `.deb` agent conflict handling, and
+operator recovery across reboot have been qualified. We can provide the exact
+denial logs and a minimal reproducer to
 reviewers without posting host credentials or private keys.
