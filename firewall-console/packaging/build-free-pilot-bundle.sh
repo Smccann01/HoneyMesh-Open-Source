@@ -7,7 +7,9 @@ trap 'rm -rf "$work"' EXIT
 name=network-decode-firewall-console-0.2.1-beta.9
 stage="$work/$name"
 mkdir -p "$stage" "$out"
+chmod 0755 "$stage"
 (cd "$root" && npm ci --ignore-scripts --no-audit --no-fund && npm test && npm pack --pack-destination "$stage" --silent)
+chmod 0644 "$stage/$name.tgz"
 install -m 0644 "$root/package-lock.json" "$stage/package-lock.json"
 for file in network-decode-firewall.service install-console.sh uninstall-console.sh enable-host-actions.sh disable-host-actions.sh; do
   install -m 0644 "$root/packaging/$file" "$stage/$file"
