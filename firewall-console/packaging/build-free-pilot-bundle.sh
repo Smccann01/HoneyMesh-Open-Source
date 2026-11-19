@@ -9,7 +9,7 @@ stage="$work/$name"
 mkdir -p "$stage" "$out"
 (cd "$root" && npm ci --ignore-scripts --no-audit --no-fund && npm test && npm pack --pack-destination "$stage" --silent)
 install -m 0644 "$root/package-lock.json" "$stage/package-lock.json"
-for file in network-decode-firewall.service install-console.sh uninstall-console.sh; do
+for file in network-decode-firewall.service install-console.sh uninstall-console.sh enable-host-actions.sh disable-host-actions.sh; do
   install -m 0644 "$root/packaging/$file" "$stage/$file"
 done
 install -m 0644 "$root/packaging/FREE_PILOT_INSTALL.md" "$stage/FREE_PILOT_INSTALL.md"

@@ -11,7 +11,7 @@ fail() { printf 'Firewall host actions: %s\n' "$1" >&2; exit 1; }
 systemctl is-active --quiet network-decode-firewall.service || fail 'console service is not active'
 systemctl is-active --quiet honeymesh.service || fail 'HoneyMesh agent is not active'
 
-python3 - <<'PY' || fail 'paid agent contract or local admin account is not ready in TEST'
+python3 - <<'PY' || fail 'compatible agent contract or local admin account is not ready in TEST'
 import json, ssl, urllib.request
 from pathlib import Path
 
