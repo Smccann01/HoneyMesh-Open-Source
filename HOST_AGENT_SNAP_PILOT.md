@@ -14,8 +14,18 @@ passed for both agents with `network-control`, `mount-observe`,
 namespaces, it verified baseline traffic, TEST refusal of a manual ban,
 ENFORCE blocking of an exact source, increased XDP drop counters, recovery
 after release, return to TEST, and detach on exit. This is a local diagnostic,
-not a Store approval or a general production qualification. The BTF plug is
-privileged and needs Canonical review before distribution.
+not a Store approval or a general production qualification. Canonical's current
+[system-files interface guidance](https://snapcraft.io/docs/reference/interfaces/system-files-interface/)
+says Store acceptance excludes non-owned paths under `/sys`. The diagnostic's
+read-only `kernel-btf` plug is therefore not an approved Store design. The
+publisher must seek a purpose-specific interface or change BTF loading before
+submitting a public revision.
+
+The [crash/restart/purge CI run](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44626839684)
+passed on disposable Ubuntu 24.04 runners for both agents. The strict diagnostic
+verified XDP detach after a forced process exit, restart in TEST with the same
+private configuration, key, and admin token, then purge removal of Snap state.
+This does not cover refresh, revert, a real host interface, or Store approval.
 
 Each candidate must be installed with `--devmode --dangerous` from a CI
 artifact, on a disposable Ubuntu 24.04 AMD64 host only. Neither package starts
@@ -27,12 +37,12 @@ interface for an unqualified test.
 
 Qualification before a Store beta:
 
-1. Extend the isolated veth test to crash, restart, refresh, rollback, and
-   uninstall on a disposable host. Record actual kernel and snapd logs.
-2. Obtain Store approval for the requested strict interfaces, especially
-   read-only kernel BTF. Devmode is diagnostic and is not a release
-   confinement model. If strict approval is unavailable, review a classic
-   confinement request with Canonical.
+1. Complete refresh/revert, non-purge removal and restore, and conflicting-agent
+   checks on a disposable host. Record actual kernel and snapd logs.
+2. Resolve the `/sys/kernel/btf` Store blocker with Canonical or remove the
+   runtime dependency, then obtain approval for the resulting strict interface
+   set. Devmode is diagnostic and is not a release confinement model. If strict
+   approval is unavailable, review a classic confinement request with Canonical.
 3. Prove config, certificates, and runtime state survive refresh; prove
    backup, rollback, and purge behavior. Design an operator-controlled service
    that never attaches a host interface on installation.
@@ -50,13 +60,14 @@ program and attach only to an interface explicitly selected by the local
 operator. Installation does not start an agent or select an interface. Initial
 mode is TEST; sharing is disabled. Local setup generates unique credentials.
 
-The requested non-auto-connected plugs are `network-control` for XDP link
+The diagnostic's non-auto-connected plugs are `network-control` for XDP link
 operations, `system-trace` for BPF operations, `mount-observe` for reading
 `/proc/self/mountinfo` during BPF initialization, `firewall-control` for
 host enforcement, and `kernel-btf` (`system-files`) with read-only access to
 `/sys/kernel/btf` for CO-RE relocations. The agent does not need to write to
-the BTF directory. The Store team should determine whether the BTF access is
-acceptable under strict confinement or whether a dedicated interface is
+the BTF directory, but current `system-files` Store policy excludes non-owned
+`/sys` paths. Ask the Store and snapd teams whether a purpose-specific BTF
+interface exists or can be added, or whether a different BTF loading design is
 required. No auto-connection is requested for the privileged plugs in this
 pilot.
 
