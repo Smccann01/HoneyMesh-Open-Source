@@ -1,0 +1,65 @@
+name: Build Core and Node developer Snaps
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'core/**'
+      - 'node/agent/**'
+      - '.github/workflows/build-host-agent-snaps.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  snap:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: core
+            snap_name: network-decode-core
+          - component: node/agent
+            snap_name: network-decode-node
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build developer candidate
+        id: build
+        uses: snapcore/action-build@v1
+        with:
+          path: ${{ matrix.component }}
+      - name: Install and check private first-run state
+        env:
+          SNAP_FILE: ${{ steps.build.outputs.snap }}
+          SNAP_NAME: ${{ matrix.snap_name }}
+        run: |
+          sudo snap install --devmode --dangerous "$SNAP_FILE"
+          sudo snap run "$SNAP_NAME.init"
+          sudo python3 - "$SNAP_NAME" <<'PY'
+          import json, pathlib, stat, sys
+          root = pathlib.Path('/var/snap') / sys.argv[1] / 'common'
+          config = root / 'honeymesh.json'
+          data = json.loads(config.read_text())
+          assert data['interfaces'] == []
+          assert data['trusted_network_sharing_enabled'] is False
+          assert data['trusted_mesh_network_enabled'] is False
+          assert stat.S_IMODE(config.stat().st_mode) == 0o600
+          assert (root / 'certs/node/node.key').is_file()
+          assert stat.S_IMODE((root / 'certs/node/node.key').stat().st_mode) == 0o600
+          assert (root / 'runtime-state.json').is_file()
+          PY
+          sudo snap run "$SNAP_NAME" -migrate-state
+          sudo snap remove --purge "$SNAP_NAME"
+      - name: Record checksum
+        env:
+          SNAP_FILE: ${{ steps.build.outputs.snap }}
+        run: sha256sum "$SNAP_FILE" > SNAP-SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.snap_name }}-developer-candidate
+          path: |
+            ${{ steps.build.outputs.snap }}
+            SNAP-SHA256SUMS
+          retention-days: 7
