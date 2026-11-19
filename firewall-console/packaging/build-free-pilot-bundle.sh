@@ -14,6 +14,6 @@ for file in network-decode-firewall.service install-console.sh uninstall-console
 done
 install -m 0644 "$root/packaging/FREE_PILOT_INSTALL.md" "$stage/FREE_PILOT_INSTALL.md"
 install -m 0644 "$root/LICENSE" "$stage/LICENSE"
-(cd "$work" && tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner -czf "$out/$name-free-pilot.tar.gz" "$name")
+(cd "$work" && tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner -cf - "$name" | gzip -n > "$out/$name-free-pilot.tar.gz")
 (cd "$out" && sha256sum "$name-free-pilot.tar.gz" > SHA256SUMS && sha256sum -c SHA256SUMS)
 echo "Built $out/$name-free-pilot.tar.gz"
