@@ -18,10 +18,15 @@ confinement: devmode
 platforms:
   amd64:
 
+plugs:
+  kernel-btf:
+    interface: system-files
+    read: [/sys/kernel/btf]
+
 apps:
   network-decode-node:
     command: bin/run-agent
-    plugs: [network, network-bind, network-control, system-trace, firewall-control]
+    plugs: [network, network-bind, network-control, mount-observe, system-trace, firewall-control, kernel-btf]
   init:
     command: bin/init-agent
 
