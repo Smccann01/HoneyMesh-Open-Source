@@ -30,7 +30,7 @@ jobs:
           SNAP_FILE: ${{ steps.build.outputs.snap }}
         run: |
           sudo snap install --dangerous "$SNAP_FILE"
-          snap services honeymesh-console
+          snap services network-decode-console
           for attempt in $(seq 1 30); do
             if curl --fail --silent http://127.0.0.1:8787/health > /tmp/hm-snap-health.json; then break; fi
             sleep 1
@@ -42,8 +42,8 @@ jobs:
           assert health['status'] == 'ok'
           assert health['scope'] == 'local_application_firewall_lab'
           PY
-          sudo snap connect honeymesh-console:network-observe
-          token=$(sudo python3 -c 'import json; print(json.load(open("/var/snap/honeymesh-console/common/private/credentials.json"))["adminToken"])')
+          sudo snap connect network-decode-console:network-observe
+          token=$(sudo python3 -c 'import json; print(json.load(open("/var/snap/network-decode-console/common/private/credentials.json"))["adminToken"])')
           curl --fail --silent --show-error -H "Authorization: Bearer $token" \
             http://127.0.0.1:8787/api/status > /tmp/hm-snap-status.json
           curl --fail --silent --show-error -H "Authorization: Bearer $token" \
@@ -60,15 +60,15 @@ jobs:
           assert telemetry['source'] == 'Linux /proc/net socket and interface counters', telemetry
           PY
           test "$(curl --silent -o /dev/null -w '%{http_code}' http://127.0.0.1:8787/api/host/grants)" != 200
-          sudo snap stop honeymesh-console
-          sudo snap remove --purge honeymesh-console
+          sudo snap stop network-decode-console
+          sudo snap remove --purge network-decode-console
       - name: Record checksum
         env:
           SNAP_FILE: ${{ steps.build.outputs.snap }}
         run: sha256sum "$SNAP_FILE" > SNAP-SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
-          name: honeymesh-console-snap-candidate
+          name: network-decode-console-snap-candidate
           path: |
             ${{ steps.build.outputs.snap }}
             SNAP-SHA256SUMS
