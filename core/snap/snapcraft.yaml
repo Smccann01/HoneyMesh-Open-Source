@@ -27,12 +27,15 @@ apps:
 
 parts:
   agent:
-    plugin: go
+    plugin: nil
     source: .
     build-snaps: [go/1.26/stable]
     override-build: |
       export GOTOOLCHAIN=go1.26.10 CGO_ENABLED=0
-      craftctl default
+      cd "$CRAFT_PART_SRC"
+      go mod download
+      install -d "$CRAFT_PART_INSTALL/bin"
+      go build -trimpath -buildvcs=false -ldflags=-buildid= -o "$CRAFT_PART_INSTALL/bin/honeymesh" ./
   runtime:
     plugin: nil
     source: .
