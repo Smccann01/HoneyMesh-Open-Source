@@ -21,7 +21,7 @@ platforms:
 plugs:
   kernel-btf:
     interface: system-files
-    read: [/sys/kernel/btf/vmlinux]
+    read: [/sys/kernel/btf]
 
 apps:
   network-decode-core:
