@@ -65,6 +65,9 @@ func startSecureDashboard(port string) (*http.Server, error) {
 	mux.HandleFunc("/api/enforcement/contract", apiEnforcementContract)
 	mux.HandleFunc("/api/enforcement/operator-grants", apiOperatorGrants)
 	mux.HandleFunc("/api/enforcement/operator-grants/release", apiOperatorGrantRelease)
+	mux.HandleFunc("/api/adaptive-trust/status", apiAdaptiveTrustStatus)
+	mux.HandleFunc("/api/adaptive-trust/relationship", apiAdaptiveTrustRelationship)
+	mux.HandleFunc("/api/adaptive-trust/preview", apiAdaptiveTrustPreview)
 	mux.HandleFunc("/api/mode", apiMode)
 	mux.HandleFunc("/api/health", apiHealth)
 	mux.HandleFunc("/api/traps", apiTraps)
@@ -2000,6 +2003,13 @@ var dashboardHTML = `
         .btn-test { background: var(--accent); color: #000; }
         .btn-enforce { background: #34495e; color: #fff; }
         .btn-lock { background: var(--red); color: #fff; }
+		.hat-banner { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 20px; background:#102033; border-bottom:1px solid var(--border); flex-shrink:0; font-size:0.78rem; }
+		.hat-banner strong { color:var(--accent); margin-right:10px; }
+		.hat-banner span { color:#cbd5e1; }
+		.hat-fields { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin:12px 0; }
+		.hat-fields label { display:grid; gap:5px; color:#cbd5e1; font-size:0.75rem; }
+		.hat-fields input { min-width:0; padding:8px; color:var(--text); background:#090f1a; border:1px solid var(--border); border-radius:6px; }
+		.hat-readout { white-space:pre-wrap; overflow-wrap:anywhere; padding:10px; margin:8px 0 14px; border:1px solid var(--border); border-radius:6px; background:#090f1a; color:#e2e8f0; font:0.75rem/1.5 ui-monospace,monospace; }
 
         .kpis {
             display: grid;
@@ -2391,6 +2401,10 @@ var dashboardHTML = `
             <button class="btn-lock" onclick="setMode('LOCKDOWN')">LOCKDOWN</button>
         </div>
     </header>
+	<div class="hat-banner">
+		<div><strong>HoneyMesh 2.0 Adaptive Trust</strong><span>Local preview only. No 2.0 access or kernel enforcement is enabled.</span></div>
+		<button class="btn btn-accent" onclick="openHATModal()">OPEN 2.0 PREVIEW</button>
+	</div>
 
     <div class="kpis">
         <div class="kpi"><b id="kpi-surface">0 / 0</b><span>PROTECTION SURFACE (LOCAL / NETWORK)</span></div>
@@ -2709,6 +2723,34 @@ var dashboardHTML = `
         </div>
     </div>
 
+	<div class="modal" id="hat-modal" onclick="closeHATModal(event)">
+		<div class="modal-card" onclick="event.stopPropagation()">
+			<div class="modal-header">
+				<div class="tab-row"><span class="tab active">ADAPTIVE TRUST 2.0 · OBSERVE ONLY</span></div>
+				<button class="modal-close" onclick="document.getElementById('hat-modal').classList.remove('open')">CLOSE</button>
+			</div>
+			<div class="modal-body">
+				<p id="hat-status">Loading local preview status...</p>
+				<p style="color:#cbd5e1;font-size:0.8rem;">Inspect one exact relationship. Browser input does not assert verified identity or posture. Preview records a decision audit, but cannot grant access or change firewall rules.</p>
+				<div class="hat-fields">
+					<label>Tenant ID<input id="hat-tenant" autocomplete="off" placeholder="tenant-a" /></label>
+					<label>Subject ID<input id="hat-subject" autocomplete="off" placeholder="web-a" /></label>
+					<label>Resource ID<input id="hat-resource" autocomplete="off" placeholder="orders-api" /></label>
+					<label>Action<input id="hat-action" autocomplete="off" placeholder="orders.read" /></label>
+					<label>Policy version<input id="hat-policy" autocomplete="off" placeholder="pilot-1" /></label>
+				</div>
+				<div style="display:flex;gap:8px;flex-wrap:wrap;">
+					<button class="btn btn-accent" onclick="inspectHAT()">INSPECT RELATIONSHIP</button>
+					<button class="btn btn-muted" onclick="previewHAT()">PREVIEW DECISION</button>
+				</div>
+				<h3>Approved grant</h3><div class="hat-readout" id="hat-grant">No relationship selected.</div>
+				<h3>Local hold</h3><div class="hat-readout" id="hat-hold">No relationship selected.</div>
+				<h3>Latest preview</h3><div class="hat-readout" id="hat-decision">No preview requested.</div>
+				<h3>Decision audit</h3><div class="hat-readout" id="hat-history">No relationship selected.</div>
+			</div>
+		</div>
+	</div>
+
     <script>
         const TOKEN = prompt("Enter Admin Token") || "";
         let trustedMeshNetworksState = [];
@@ -2716,6 +2758,55 @@ var dashboardHTML = `
         let lastTrustedPeersError = "";
 
         let unauthorizedShown = false;
+		function openHATModal() {
+			document.getElementById('hat-modal').classList.add('open');
+			loadHATStatus();
+		}
+		function closeHATModal(event) {
+			if (event.target.id === 'hat-modal') event.target.classList.remove('open');
+		}
+		function hatRelationshipInput() {
+			return {
+				tenant_id: document.getElementById('hat-tenant').value.trim(),
+				subject_id: document.getElementById('hat-subject').value.trim(),
+				resource_id: document.getElementById('hat-resource').value.trim(),
+				action: document.getElementById('hat-action').value.trim(),
+				policy_version: document.getElementById('hat-policy').value.trim()
+			};
+		}
+		async function loadHATStatus() {
+			const status = await api('/adaptive-trust/status');
+			const label = document.getElementById('hat-status');
+			label.textContent = status && status.store_available
+				? 'Local preview ready · identity adapter unavailable · application and kernel enforcement disabled'
+				: 'Local preview unavailable. Existing Core protection is unaffected.';
+		}
+		async function inspectHAT() {
+			const input = hatRelationshipInput();
+			const result = await api('/adaptive-trust/relationship?' + new URLSearchParams(input));
+			if (!result) {
+				document.getElementById('hat-status').textContent = 'Could not inspect this relationship. Enter all five exact IDs.';
+				return;
+			}
+			document.getElementById('hat-grant').textContent = result.grant
+				? JSON.stringify(result.grant, null, 2) : 'No active grant for this action and policy version.';
+			document.getElementById('hat-hold').textContent = result.hold
+				? JSON.stringify(result.hold, null, 2) : 'No active local hold for this action.';
+			document.getElementById('hat-history').textContent = result.history && result.history.length
+				? JSON.stringify(result.history, null, 2) : 'No local decisions recorded for this relationship.';
+		}
+		async function previewHAT() {
+			const result = await api('/adaptive-trust/preview', {
+				method: 'POST', body: JSON.stringify(hatRelationshipInput())
+			});
+			if (!result) {
+				document.getElementById('hat-status').textContent = 'Preview unavailable. Check the exact IDs and local store status.';
+				return;
+			}
+			document.getElementById('hat-decision').textContent = JSON.stringify(result.decision, null, 2)
+				+ '\n\n' + result.note;
+			await inspectHAT();
+		}
         async function api(endpoint, options = {}) {
             try {
                 const res = await fetch('/api' + endpoint, {

@@ -227,6 +227,7 @@ func main() {
 	if err := startUEE(); err != nil {
 		log.Fatalf("[BOOT] Unified enforcement initialization failed: %v", err)
 	}
+	startHATReadOnly()
 	banMutex.Lock()
 	if err := refreshLegacyBanView(time.Now()); err != nil {
 		banMutex.Unlock()
