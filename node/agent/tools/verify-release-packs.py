@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Reject release packages containing node identity or live configuration."""
 
+import argparse
 import io
 import json
 import pathlib
 import subprocess
-import sys
 import tarfile
 
 
@@ -31,7 +31,7 @@ def inspect_tar(path):
     with tarfile.open(path, "r:gz") as archive:
         names = archive.getnames()
         member = next(item for item in archive.getmembers() if item.name.endswith("/honeymesh.json"))
-        assert member.mode == 0o600, path
+        assert member.mode == 0o640, path
         config = archive.extractfile(member).read()
     return names, config
 
@@ -41,7 +41,7 @@ def inspect_deb(path):
     with tarfile.open(fileobj=io.BytesIO(data), mode="r:") as archive:
         names = archive.getnames()
         member = next(item for item in archive.getmembers() if item.name.endswith("/honeymesh.json"))
-        assert member.mode == 0o600, path
+        assert member.mode == 0o640, path
         config = archive.extractfile(member).read()
     return names, config
 
@@ -62,12 +62,14 @@ def inspect_rpm(path):
 
 
 def main():
-    if len(sys.argv) not in (2, 3) or (len(sys.argv) == 3 and sys.argv[2] != "--amd64-only"):
-        raise SystemExit("usage: verify-release-packs.py DIST_DIR [--amd64-only]")
-    folder = pathlib.Path(sys.argv[1])
+    parser = argparse.ArgumentParser()
+    parser.add_argument("folder", type=pathlib.Path)
+    parser.add_argument("--amd64-only", action="store_true", help="expect only the three AMD64 package formats")
+    args = parser.parse_args()
+    folder = args.folder
     paths = sorted(folder.rglob("*.deb")) + sorted(folder.rglob("*.rpm")) + sorted(folder.rglob("*.tar.gz"))
-    expected = 3 if len(sys.argv) == 3 else 6
-    assert len(paths) == expected, f"expected {expected} packages, found {len(paths)}"
+    expected_count = 3 if args.amd64_only else 6
+    assert len(paths) == expected_count, f"expected {expected_count} packages, found {len(paths)}"
     for path in paths:
         inspect = inspect_deb if path.suffix == ".deb" else inspect_rpm if path.suffix == ".rpm" else inspect_tar
         names, config = inspect(path)

@@ -1,6 +1,6 @@
 # Candidate multi-app Node bridge
 
-This is an RC4 development-branch feature. A two-app TEST-mode pilot passed on a disposable Ubuntu VM; customer ENFORCE and the signed Node Pro package remain unqualified. Keep the existing single-socket deployment until the release gates are complete.
+This is a free Node Pro pilot feature. Begin with two apps in TEST mode and `auto_block: false`. App-initiated kernel enforcement remains unqualified until the installed-host canary and rollback gates pass.
 
 Set `HM_EDGE_APPS_FILE` in the HoneyMesh agent service to an absolute path to a protected JSON file. Do not set `HM_EDGE_SOCKET` at the same time. The config and secret files must be regular files owned by root or the agent UID, readable by the agent, with no group write or world access. Symlinked files are rejected. Protect their parent directories as well. Each app needs a different Unix UID, socket path, and secret of at least 32 bytes. Provision at most 16 apps.
 
@@ -35,6 +35,6 @@ For containers or user namespaces, configure the UID as the agent sees it on the
 
 `auto_block` remains off by default. Enabling it requires exact `canary_ips`, ENFORCE mode, an attached eligible interface, and the agent's existing source policy. App events are kept local and do not enter Exchange publication. Audit rows include the app ID. One app cannot take over an already active ban on the same source IP; such an event remains observed.
 
-Multi-app enforcement also requires `HM_NODE_PRO_ENTITLEMENT_FILE` to point to a protected, publisher-signed Node Pro host entitlement and `HM_NODE_PRO_UNIT_ID` to match its `unit_id`. The agent reads and verifies the entitlement immediately before each app grant. Missing, expired, modified, wrong-plan, wrong-unit, symlinked, or writable files leave events in observe state with audit detail `entitlement_inactive`. The earlier single-socket Exchange integration is unaffected. Existing short-lived app grants retain their own bounded TTL if the entitlement expires after a grant was made; new grants stop. The host unit is a licensed assignment and not a hardware fingerprint. These settings are for the next signed Node Pro package; the older unsigned candidate does not contain this check.
+The free multi-app path does not require a commercial entitlement. Local safeguards still govern every app grant: a registered app identity, matching Unix peer UID and secret, an exact canary source, an attached eligible interface, ENFORCE mode, and a bounded TTL. Start with `auto_block: false` and no protected interface while validating evidence. The earlier single-socket Exchange integration is unaffected.
 
 Before release, run two different Linux UIDs and real Node services on one clean VM. Verify positive events for each app, cross-socket access, wrong secret, wrong UID, wrong claimed app ID, per-app snapshots, restart, expiry, and manual rollback. A unit test or one-process socket test does not close that gate.

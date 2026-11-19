@@ -19,7 +19,8 @@
     "ca_cert": "certs/ca/ca.crt",
     "cert_file": "certs/node/node.crt",
     "key_file": "certs/node/node.key",
-    "allowlist_base": true
+    "allowlist_base": true,
+    "automatic_ban_ttl_seconds": 900
   },
   "geo_policy": { "enabled": false }
 }

@@ -19,7 +19,6 @@ import (
 
 	"honeymesh/internal/agentbridge"
 	"honeymesh/internal/banownership"
-	"honeymesh/internal/license"
 )
 
 var nodeAppID = regexp.MustCompile(`^[A-Za-z0-9_-]{8,128}$`)
@@ -71,19 +70,6 @@ func readNodeEdgeApps(path string) ([]nodeEdgeApp, error) {
 func protectedAppSecret(path string) ([]byte, error) {
 	data, err := readProtectedNodeFile(path, 4096)
 	return []byte(strings.TrimSpace(string(data))), err
-}
-
-func nodeProHostEntitled() bool {
-	path, unitID := os.Getenv("HM_NODE_PRO_ENTITLEMENT_FILE"), os.Getenv("HM_NODE_PRO_UNIT_ID")
-	if path == "" || unitID == "" {
-		return false
-	}
-	data, err := readProtectedNodeFile(path, 4096)
-	if err != nil {
-		return false
-	}
-	document, err := license.ParseNodeProEntitlement(data)
-	return err == nil && license.VerifyNodeProEntitlement(document, unitID, time.Now()) == nil
 }
 
 func readProtectedNodeFile(path string, maxBytes int64) ([]byte, error) {
@@ -183,7 +169,6 @@ func startNodeEdgeApps(shutdown <-chan struct{}, configPath string) error {
 		}
 		c := &nodeEdgeController{
 			db: db, autoBlock: app.AutoBlock,
-			canEnforce:  func() bool { return true },
 			modeEnforce: func() bool { return Mode() == ModeEnforce }, attached: nodeEdgeInterfaceAttached,
 			allowed: func(ip string) bool {
 				addr, err := netip.ParseAddr(ip)

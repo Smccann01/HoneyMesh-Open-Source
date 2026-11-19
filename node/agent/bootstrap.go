@@ -94,6 +94,9 @@ func loadConfig() {
 	if config.Security.TrapBanWindowS <= 0 {
 		config.Security.TrapBanWindowS = 60
 	}
+	if _, err := automaticBanDuration(config.Security.AutomaticBanTTLSeconds); err != nil {
+		log.Fatalf("[CONFIG] %v", err)
+	}
 	if config.Security.MeshEventRateLimitPerMin <= 0 {
 		config.Security.MeshEventRateLimitPerMin = defaultMeshRatePerMin
 	}

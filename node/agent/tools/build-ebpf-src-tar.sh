@@ -19,6 +19,8 @@ fi
 OUTDIR="${OUTDIR:-$ROOT_DIR/dist}"
 OUTNAME="honeymesh-ebpf-src-${VERSION}.tar.gz"
 TMPDIR="$(mktemp -d)"
+SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git -C "$ROOT_DIR" log -1 --format=%ct -- . 2>/dev/null || date +%s)}"
+export SOURCE_DATE_EPOCH
 
 mkdir -p "$OUTDIR"
 mkdir -p "$TMPDIR/honeymesh-${VERSION}/bpf/src"
@@ -34,8 +36,8 @@ fi
 cp "$ROOT_DIR/bpf/LICENSE" "$TMPDIR/honeymesh-${VERSION}/bpf/"
 cp "${c_files[@]}" "$TMPDIR/honeymesh-${VERSION}/bpf/src/"
 
-# Create tarball
-( cd "$TMPDIR" && tar -czf "$OUTDIR/$OUTNAME" "honeymesh-${VERSION}" )
+# Keep ordering, ownership and timestamps stable across build directories.
+( cd "$TMPDIR" && tar --sort=name --mtime="@$SOURCE_DATE_EPOCH" --owner=0 --group=0 --numeric-owner -cf - "honeymesh-${VERSION}" | gzip -n > "$OUTDIR/$OUTNAME" )
 
 rm -rf "$TMPDIR"
 

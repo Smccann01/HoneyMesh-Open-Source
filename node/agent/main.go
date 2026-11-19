@@ -24,7 +24,7 @@ import (
 	"honeymesh/internal/mesh"
 )
 
-const Version = "v2.3.6-rc5-nodepro6"
+const Version = "v2.3.7-rc1-nodepro1"
 
 func printStartupBanner() {
 	fmt.Println("\x1b[38;5;208m" +
@@ -129,6 +129,7 @@ func main() {
 			log.Fatal("[HoneyMesh] Join requires -t <token>")
 		}
 		loadConfig()
+		initNodeIdentity()
 		performJoin(*joinUrlFlag, *joinTokenFlag)
 		return
 	}

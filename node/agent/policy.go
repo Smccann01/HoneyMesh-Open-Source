@@ -6,9 +6,29 @@ import (
 )
 
 const (
-	minManualBanTTLSeconds = 30
-	maxManualBanTTLSeconds = 24 * 60 * 60
+	minManualBanTTLSeconds        = 30
+	maxManualBanTTLSeconds        = 24 * 60 * 60
+	defaultAutomaticBanTTLSeconds = 15 * 60
 )
+
+// Detector grants have a separate, bounded lifetime from manual and app grants.
+func automaticBanDuration(ttlSeconds *int) (time.Duration, error) {
+	if ttlSeconds == nil {
+		return defaultAutomaticBanTTLSeconds * time.Second, nil
+	}
+	if *ttlSeconds < minManualBanTTLSeconds || *ttlSeconds > maxManualBanTTLSeconds {
+		return 0, errors.New("automatic_ban_ttl_seconds must be between 30 and 86400")
+	}
+	return time.Duration(*ttlSeconds) * time.Second, nil
+}
+
+func getAutomaticBanDuration() time.Duration {
+	duration, err := automaticBanDuration(config.Security.AutomaticBanTTLSeconds)
+	if err != nil {
+		panic(err) // loadConfig validates this before detectors start.
+	}
+	return duration
+}
 
 // manualBanDuration preserves the mode default when no TTL is requested.
 // Explicit values are bounded to prevent accidental permanent or ineffective bans.

@@ -51,35 +51,6 @@ func TestNodeEdgeAppsRequireDistinctIdentities(t *testing.T) {
 	}
 }
 
-func TestNodeProHostEntitlementFailsClosed(t *testing.T) {
-	t.Setenv("HM_NODE_PRO_ENTITLEMENT_FILE", "")
-	t.Setenv("HM_NODE_PRO_UNIT_ID", "")
-	if nodeProHostEntitled() {
-		t.Fatal("missing entitlement authorized application enforcement")
-	}
-	if label := licenseDisplayName(); label != "Community" {
-		t.Fatalf("missing entitlement displayed %q", label)
-	}
-	path := filepath.Join(t.TempDir(), "entitlement.json")
-	if err := os.WriteFile(path, []byte(`{"schema_version":1,"product":"node_pro"}`), 0600); err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv("HM_NODE_PRO_ENTITLEMENT_FILE", path)
-	t.Setenv("HM_NODE_PRO_UNIT_ID", "host_0123456789abcdef01234567")
-	if nodeProHostEntitled() {
-		t.Fatal("unsigned entitlement authorized application enforcement")
-	}
-	if label := licenseDisplayName(); label != "Community" {
-		t.Fatalf("unsigned entitlement displayed %q", label)
-	}
-	if err := os.Chmod(path, 0666); err != nil {
-		t.Fatal(err)
-	}
-	if nodeProHostEntitled() {
-		t.Fatal("writable entitlement authorized application enforcement")
-	}
-}
-
 func TestNodeEdgeActiveBlocksAreScopedByApp(t *testing.T) {
 	database := testNodeEdgeDB(t)
 	a := testNodeEdgeController(database, true, time.Now())

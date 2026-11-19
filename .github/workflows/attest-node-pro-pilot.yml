@@ -1,0 +1,50 @@
+name: Attest Node Pro free pilot
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.10'
+          cache: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install package inspection tools
+        run: sudo apt-get update && sudo apt-get install -y rpm cpio ripgrep
+      - name: Test and build twice
+        shell: bash
+        run: |
+          (cd node/agent && go test ./...)
+          mkdir -p "$RUNNER_TEMP/node-pro-a" "$RUNNER_TEMP/node-pro-b"
+          (cd node/agent && DIST_DIR="$RUNNER_TEMP/node-pro-a" bash tools/build-linux-packs.sh)
+          (cd node/agent && DIST_DIR="$RUNNER_TEMP/node-pro-b" bash tools/build-linux-packs.sh)
+          python3 node/agent/tools/verify-release-packs.py "$RUNNER_TEMP/node-pro-a"
+          python3 node/agent/tools/verify-release-packs.py "$RUNNER_TEMP/node-pro-b"
+          diff -u \
+            <(cd "$RUNNER_TEMP/node-pro-a" && find . -type f -print0 | sort -z | xargs -0 sha256sum) \
+            <(cd "$RUNNER_TEMP/node-pro-b" && find . -type f -print0 | sort -z | xargs -0 sha256sum)
+          (cd "$RUNNER_TEMP/node-pro-a" && find . -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS-all)
+          (cd "$RUNNER_TEMP/node-pro-a" && sha256sum honeymesh_2.3.7-rc1-nodepro1_amd64.deb > SHA256SUMS)
+          (cd "$RUNNER_TEMP/node-pro-a" && sha256sum -c SHA256SUMS-all && sha256sum -c SHA256SUMS)
+      - name: Attest packages and checksum manifest
+        uses: actions/attest@v4
+        with:
+          subject-path: ${{ runner.temp }}/node-pro-a/**
+      - name: Upload candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-pro-free-pilot
+          path: ${{ runner.temp }}/node-pro-a/
+          retention-days: 14
