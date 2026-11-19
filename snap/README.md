@@ -4,6 +4,8 @@ This is a strict, observation-only Snap candidate for Ubuntu App Center. It
 packages the free Firewall Console from this repository; it does not package or
 install HoneyMesh Core, attach XDP, or enable host writes. The Snap binds only
 to `127.0.0.1:8787` and stores local credentials in its private Snap data.
+The square Store icon is a size-adjusted copy of `core/web/logo.png`, preserving
+the project's bee mark shown on network-decode.com.
 
 The `network-observe` plug may require an explicit connection before host
 socket and interface snapshots are available:

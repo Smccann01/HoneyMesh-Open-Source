@@ -11,6 +11,7 @@ description: |
   install an XDP program or protect traffic on its own. Use it first on a
   noncritical Ubuntu host.
 license: Apache-2.0
+icon: snap/gui/icon.png
 website: https://network-decode.com/products/firewall
 source-code: https://github.com/Smccann01/HoneyMesh-Open-Source/tree/main/firewall-console
 issues: https://github.com/Smccann01/HoneyMesh-Open-Source/issues
