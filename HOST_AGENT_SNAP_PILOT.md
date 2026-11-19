@@ -7,6 +7,12 @@ the Community configuration has no selected interfaces or sharing, and probes
 XDP attach/detach on an isolated veth pair. Passing these tests does not
 establish that enforcement works under strict confinement.
 
+The separate strict-confinement diagnostic also attaches and detaches XDP on
+the isolated veth when `network-control`, `mount-observe`, `system-trace`,
+`firewall-control`, and a read-only `system-files` plug for `/sys/kernel/btf`
+are connected manually. This is a local diagnostic, not a Store approval.
+The BTF plug is privileged and needs Canonical review before distribution.
+
 Each candidate must be installed with `--devmode --dangerous` from a CI
 artifact, on a disposable Ubuntu 24.04 AMD64 host only. Neither package starts
 a service on installation. Run `sudo snap run network-decode-core.init` or
@@ -19,9 +25,10 @@ Qualification before a Store beta:
 
 1. Extend the isolated veth test to map update, crash, restart, and uninstall
    on a disposable host. Record actual kernel and snapd logs.
-2. Resolve required BPF access under an approved Snap confinement model.
-   Devmode is diagnostic and is not a release confinement model. Classic
-   confinement requires Canonical review.
+2. Obtain Store approval for the requested strict interfaces, especially
+   read-only kernel BTF. Devmode is diagnostic and is not a release
+   confinement model. If strict approval is unavailable, review a classic
+   confinement request with Canonical.
 3. Prove config, certificates, and runtime state survive a Snap refresh;
    prove backup, rollback, and purge behavior.
 4. Test on Ubuntu 24.04 AMD64, including unsupported-kernel and conflicting

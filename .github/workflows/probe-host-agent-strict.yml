@@ -75,10 +75,13 @@ jobs:
             echo 'STRICT_PROBE=blocked'
             grep -E 'Failed to load eBPF|Attach failed|attach XDP|operation not permitted|permission denied' strict-probe.log || true
             sudo journalctl -k --no-pager -n 150 | grep "snap.$SNAP_NAME" | grep 'DENIED' | tail -20 || true
+            exit 1
           fi
           if sudo ip -details link show hm-strict-test | grep -q 'prog/xdp'; then
             echo 'STRICT_PROBE=detach_failed'
+            exit 1
           fi
+          echo 'STRICT_PROBE=detached'
       - name: Remove diagnostic Snap and interface
         if: always()
         env:
