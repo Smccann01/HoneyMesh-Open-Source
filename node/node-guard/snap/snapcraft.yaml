@@ -1,0 +1,37 @@
+name: network-decode-nodeguard
+title: HoneyMesh Node Guard Tools
+base: core24
+version: '0.2.0-alpha.6'
+summary: Local policy tools for the HoneyMesh Node Guard SDK
+description: |
+  Command-line tools to create, validate, and simulate HoneyMesh Node Guard
+  policies for a Node.js application. The tools run locally and do not install
+  an agent, attach XDP, or protect an application until its SDK is integrated
+  into that application. Start with OBSERVE on a noncritical service.
+license: Apache-2.0
+icon: snap/gui/icon.png
+website: https://network-decode.com/node-guard-free
+source-code: https://github.com/Smccann01/HoneyMesh-Open-Source/tree/main/node/node-guard
+issues: https://github.com/Smccann01/HoneyMesh-Open-Source/issues
+grade: devel
+confinement: strict
+platforms:
+  amd64:
+
+apps:
+  network-decode-nodeguard:
+    command: bin/start-nodeguard
+    plugs:
+      - home
+
+parts:
+  nodeguard:
+    plugin: npm
+    source: .
+    npm-include-node: true
+    npm-node-version: 22.16.0
+  launcher:
+    plugin: dump
+    source: snap/launcher
+    organize:
+      start-nodeguard: bin/start-nodeguard
