@@ -26,6 +26,8 @@ plugs:
 apps:
   network-decode-core:
     command: bin/run-agent
+    daemon: simple
+    install-mode: disable
     plugs: [network, network-bind, network-control, mount-observe, system-trace, firewall-control, kernel-btf]
   init:
     command: bin/init-agent
