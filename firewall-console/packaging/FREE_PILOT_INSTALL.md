@@ -19,7 +19,7 @@ sudo systemctl is-active network-decode-firewall.service
 curl --fail http://127.0.0.1:8787/health
 ```
 
-Open the UI through a local browser or an SSH tunnel to `127.0.0.1:8787`. The console creates a one-time bootstrap token locally; retrieve it on the host using the command printed by the installer. Create an admin account and keep the token private. The installed service sets `HM_HOST_ACTIONS_ENABLED=0`. The signed RC6 agent does not support the console's newer scoped-write contract, so no host block is available from this bundle.
+Open the UI through a local browser or an SSH tunnel to `127.0.0.1:8787`. The console creates a one-time bootstrap token locally; retrieve it on the host using the command printed by the installer. Create an admin account and keep the token private. The installed service sets `HM_HOST_ACTIONS_ENABLED=0`, and this free bundle does not include the host-action enable script. Core RC6 contains the scoped-grant API, but an installed-host console control and recovery pilot is still required before that path can be offered publicly. No host block is available from this bundle.
 
 To remove the console while preserving its local account state and leaving Core intact:
 
