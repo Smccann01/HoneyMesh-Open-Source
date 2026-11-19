@@ -21,7 +21,7 @@ platforms:
 apps:
   network-decode-core:
     command: bin/run-agent
-    plugs: [network, network-bind, network-control, system-trace, firewall-control]
+    plugs: [network, network-bind, network-control, mount-observe, system-trace, firewall-control]
   init:
     command: bin/init-agent
 
