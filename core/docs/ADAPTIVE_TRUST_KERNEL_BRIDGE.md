@@ -9,3 +9,7 @@ Ordinary HAT `deny`, `verify`, or `restrict` decisions for an application route 
 The binding structure is a contract for a future trusted local verifier, **not** evidence by itself. The caller must authenticate the operators, verify address exclusivity and its expiry, and bind the subject to that address before calling the bridge. A source-IP binding must be persisted and revocable. A released hold must promptly remove only its HAT UEE owner; the current short lease is an upper bound, not the intended recovery workflow. These requirements, a secure runtime API, and real XDP host tests are release gates. Do not enable this bridge for live traffic until they pass.
 
 Run the privileged map test only on a disposable host: `HONEY_KERNEL_INTEGRATION=1 go test -run '^TestAdaptiveTrustRealKernelMap$' -count=1 .`.
+
+## Disposable host result
+
+On 2026-11-19, source revision `2483b2fde7bc8445c480f72b6e09fd86ed53e03f` passed `TestAdaptiveTrustRealKernelMap` on Ubuntu 24.04.5 AMD64 with Linux `7.0.0-1017-aws`. The test loaded the real eBPF collection, confirmed the exact source in `BanMap` after the UEE write, and confirmed map removal after the short lease expired. The instance was disposable. This result covers the kernel map boundary; it does not prove XDP packet drops, workload identity binding, a live runtime caller, or application enforcement.
