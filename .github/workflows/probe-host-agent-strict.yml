@@ -94,6 +94,82 @@ jobs:
             exit 1
           fi
           echo 'STRICT_PROBE=detached'
+      - name: Probe crash, restart and private state
+        env:
+          SNAP_NAME: ${{ matrix.snap_name }}
+        run: |
+          set -eu
+          sudo python3 .github/scripts/host-agent-lifecycle-probe.py before "$SNAP_NAME"
+          sudo snap run "$SNAP_NAME" > crash-probe.log 2>&1 &
+          probe_pid=$!
+          attached=0
+          for attempt in $(seq 1 15); do
+            if sudo ip -details link show hm-strict-test | grep -q 'prog/xdp'; then
+              attached=1
+              break
+            fi
+            if ! kill -0 "$probe_pid" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          if [ "$attached" -ne 1 ]; then
+            cat crash-probe.log
+            wait "$probe_pid" || true
+            exit 1
+          fi
+          sudo pkill -KILL -x honeymesh
+          wait "$probe_pid" || true
+          for attempt in $(seq 1 10); do
+            if ! sudo ip -details link show hm-strict-test | grep -q 'prog/xdp'; then
+              break
+            fi
+            sleep 1
+          done
+          if sudo ip -details link show hm-strict-test | grep -q 'prog/xdp'; then
+            echo 'CRASH_PROBE=xdp_remained_attached' >&2
+            exit 1
+          fi
+          echo 'CRASH_PROBE=xdp_detached'
+          sudo timeout --signal=TERM --kill-after=5s 30s snap run "$SNAP_NAME" > restart-probe.log 2>&1 &
+          probe_pid=$!
+          attached=0
+          for attempt in $(seq 1 15); do
+            if sudo ip -details link show hm-strict-test | grep -q 'prog/xdp'; then
+              attached=1
+              break
+            fi
+            if ! kill -0 "$probe_pid" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          if [ "$attached" -ne 1 ]; then
+            cat restart-probe.log
+            wait "$probe_pid" || true
+            exit 1
+          fi
+          sudo python3 .github/scripts/host-agent-lifecycle-probe.py after "$SNAP_NAME"
+          wait "$probe_pid" || true
+          if sudo ip -details link show hm-strict-test | grep -q 'prog/xdp'; then
+            echo 'RESTART_PROBE=xdp_remained_attached' >&2
+            exit 1
+          fi
+          echo 'RESTART_PROBE=state_preserved_and_detached'
+      - name: Purge Snap and verify cleanup
+        env:
+          SNAP_NAME: ${{ matrix.snap_name }}
+        run: |
+          sudo snap remove --purge "$SNAP_NAME"
+          if [ -e "/var/snap/$SNAP_NAME/common" ]; then
+            echo 'PURGE_PROBE=private_state_remained' >&2
+            exit 1
+          fi
+          if sudo ip -details link show hm-strict-test | grep -q 'prog/xdp'; then
+            echo 'PURGE_PROBE=xdp_remained_attached' >&2
+            exit 1
+          fi
+          echo 'PURGE_PROBE=state_removed_and_xdp_detached'
       - name: Remove diagnostic Snap and interface
         if: always()
         env:
