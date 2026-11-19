@@ -2003,7 +2003,7 @@ var dashboardHTML = `
         .btn-test { background: var(--accent); color: #000; }
         .btn-enforce { background: #34495e; color: #fff; }
         .btn-lock { background: var(--red); color: #fff; }
-		.hat-banner { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 20px; background:#102033; border-bottom:1px solid var(--border); flex-shrink:0; font-size:0.78rem; }
+		.hat-banner { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; padding:9px 20px; background:#102033; border-bottom:1px solid var(--border); flex-shrink:0; font-size:0.78rem; }
 		.hat-banner strong { color:var(--accent); margin-right:10px; }
 		.hat-banner span { color:#cbd5e1; }
 		.hat-fields { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin:12px 0; }
