@@ -1,7 +1,7 @@
 name: network-decode-console
 title: HoneyMesh Console
 base: core24
-version: '0.2.1-beta.9'
+version: '0.2.1-beta.10'
 summary: Local, observation-only HoneyMesh firewall console
 description: |
   A local operator console for observing Linux socket and interface snapshots,
@@ -12,7 +12,7 @@ description: |
   noncritical Ubuntu host.
 license: Apache-2.0
 icon: snap/gui/icon.png
-website: https://network-decode.com/products/firewall
+website: https://network-decode.com/docs/console-snap
 source-code: https://github.com/Smccann01/HoneyMesh-Open-Source/tree/main/firewall-console
 issues: https://github.com/Smccann01/HoneyMesh-Open-Source/issues
 grade: devel
