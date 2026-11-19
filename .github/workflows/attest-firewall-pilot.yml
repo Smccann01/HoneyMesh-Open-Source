@@ -1,0 +1,36 @@
+name: Attest Firewall Console pilot
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build and compare
+        shell: bash
+        run: |
+          bash firewall-console/packaging/build-free-pilot-bundle.sh "$RUNNER_TEMP/firewall-a"
+          bash firewall-console/packaging/build-free-pilot-bundle.sh "$RUNNER_TEMP/firewall-b"
+          diff -u <(cd "$RUNNER_TEMP/firewall-a" && sha256sum * | sort) <(cd "$RUNNER_TEMP/firewall-b" && sha256sum * | sort)
+          (cd "$RUNNER_TEMP/firewall-a" && sha256sum -c SHA256SUMS)
+      - name: Attest package and checksum manifest
+        uses: actions/attest@v4
+        with:
+          subject-path: ${{ runner.temp }}/firewall-a/*
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: firewall-console-free-pilot
+          path: ${{ runner.temp }}/firewall-a/
+          retention-days: 14
