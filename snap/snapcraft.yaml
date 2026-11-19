@@ -1,0 +1,41 @@
+name: honeymesh-console
+title: HoneyMesh Console
+base: core24
+version: '0.2.1-beta.9'
+summary: Local, observation-only HoneyMesh firewall console
+description: |
+  A local operator console for observing Linux socket and interface snapshots,
+  trying synthetic Node Guard lab events, and inspecting a separately installed
+  HoneyMesh agent when configured by the operator. This beta Snap starts on
+  127.0.0.1:8787 with host writes and lab enforcement disabled. It does not
+  install an XDP program or protect traffic on its own. Use it first on a
+  noncritical Ubuntu host.
+license: Apache-2.0
+website: https://network-decode.com/products/firewall
+source-code: https://github.com/Smccann01/HoneyMesh-Open-Source/tree/main/firewall-console
+issues: https://github.com/Smccann01/HoneyMesh-Open-Source/issues
+grade: devel
+confinement: strict
+platforms:
+  amd64:
+
+apps:
+  honeymesh-console:
+    command: bin/start-console
+    daemon: simple
+    plugs:
+      - network
+      - network-bind
+      - network-observe
+
+parts:
+  console:
+    plugin: npm
+    source: firewall-console
+    npm-include-node: true
+    npm-node-version: 22.16.0
+  launcher:
+    plugin: dump
+    source: snap/launcher
+    organize:
+      start-console: bin/start-console
