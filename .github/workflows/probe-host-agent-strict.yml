@@ -5,6 +5,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/probe-host-agent-strict.yml'
+      - '.github/scripts/host-agent-traffic-probe.py'
 
 permissions:
   contents: read
@@ -45,6 +46,8 @@ jobs:
           done
           sudo snap run "$SNAP_NAME.init"
           sudo ip link add hm-strict-test type veth peer name hm-strict-peer
+          sudo ip address add 198.18.0.1/30 dev hm-strict-test
+          sudo ip address add 198.18.0.2/30 dev hm-strict-peer
           sudo ip link set hm-strict-test up
           sudo ip link set hm-strict-peer up
           sudo python3 - "$SNAP_NAME" <<'PY'
@@ -55,7 +58,7 @@ jobs:
           data['interfaces'] = ['hm-strict-test']
           config.write_text(json.dumps(data) + '\n')
           PY
-          sudo timeout --signal=TERM --kill-after=5s 15s snap run "$SNAP_NAME" > strict-probe.log 2>&1 &
+          sudo timeout --signal=TERM --kill-after=5s 45s snap run "$SNAP_NAME" > strict-probe.log 2>&1 &
           probe_pid=$!
           attached=0
           for attempt in $(seq 1 12); do
@@ -68,15 +71,20 @@ jobs:
             fi
             sleep 1
           done
-          wait "$probe_pid" || true
           if [ "$attached" -eq 1 ]; then
             echo 'STRICT_PROBE=attached'
+            sudo python3 .github/scripts/host-agent-traffic-probe.py "$SNAP_NAME" || {
+              wait "$probe_pid" || true
+              exit 1
+            }
           else
             echo 'STRICT_PROBE=blocked'
             grep -E 'Failed to load eBPF|Attach failed|attach XDP|operation not permitted|permission denied' strict-probe.log || true
             sudo journalctl -k --no-pager -n 150 | grep "snap.$SNAP_NAME" | grep 'DENIED' | tail -20 || true
+            wait "$probe_pid" || true
             exit 1
           fi
+          wait "$probe_pid" || true
           if sudo ip -details link show hm-strict-test | grep -q 'prog/xdp'; then
             echo 'STRICT_PROBE=detach_failed'
             exit 1
