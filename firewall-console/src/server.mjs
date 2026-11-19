@@ -345,7 +345,12 @@ export function createFirewallServer({ lab, adminToken, adminTokenExpiresAt, htm
         const query = requestUrl.searchParams;
         const offset = Number(query.get('offset') ?? 0);
         const limit = Number(query.get('limit') ?? 100);
-        return respond(response, 200, await kernelTelemetry({ protocol: query.get('protocol') ?? '', state: query.get('state') ?? '', search: query.get('search') ?? '', sort: query.get('sort') ?? 'state', offset, limit }));
+        try {
+          return respond(response, 200, await kernelTelemetry({ protocol: query.get('protocol') ?? '', state: query.get('state') ?? '', search: query.get('search') ?? '', sort: query.get('sort') ?? 'state', offset, limit }));
+        } catch (error) {
+          if (error.code === 'EACCES' || error.code === 'EPERM') throw new HttpError(503, 'host_telemetry_permission_denied');
+          throw error;
+        }
       }
       if (request.method === 'GET' && path === '/api/kernel/history') return respond(response, 200, kernelHistory.snapshot());
       if (request.method === 'GET' && path === '/api/kernel/connection') {

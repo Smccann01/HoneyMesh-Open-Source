@@ -39,6 +39,23 @@ test('kernel telemetry requires local admin authentication', async () => {
   } finally { server.close(); }
 });
 
+test('kernel telemetry reports missing host observation permission without hiding agent status', async () => {
+  const server = createFirewallServer({ lab: { status: () => ({}) }, adminToken: 'x'.repeat(32), html: '', script: '',
+    kernelTelemetry: async () => { const error = new Error('permission denied'); error.code = 'EACCES'; throw error; },
+    agentOverview: async () => ({ connected: true, mode: 'TEST', status: 'ok' }) });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const base = `http://127.0.0.1:${server.address().port}`;
+    const headers = { authorization: `Bearer ${'x'.repeat(32)}` };
+    const telemetry = await fetch(`${base}/api/kernel/telemetry`, { headers });
+    assert.equal(telemetry.status, 503);
+    assert.equal((await telemetry.json()).error, 'host_telemetry_permission_denied');
+    const agent = await fetch(`${base}/api/agent/overview`, { headers });
+    assert.equal(agent.status, 200);
+    assert.equal((await agent.json()).mode, 'TEST');
+  } finally { server.close(); }
+});
+
 test('connection process details stay behind the local admin session', async () => {
   const server = createFirewallServer({ lab: { status: () => ({}) }, adminToken: 'x'.repeat(32), html: '', script: '',
     connectionInspector: async () => ({ process_name: 'test-service', pid: 12, reverse_dns_is_site_identity: false }) });

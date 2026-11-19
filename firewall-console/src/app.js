@@ -697,7 +697,21 @@ async function refreshAgent() {
     : notLinked ? 'No local agent is linked. Local observations remain available; see the Snap install manual to link an existing agent.' : `HoneyMesh read-only connection unavailable (${data.reason}). Host controls are unavailable.`;
 }
 
-async function refresh() { updateStatus(await call('/api/status')); await Promise.all([refreshKernel(), refreshAgent(), refreshHistory()]); }
+async function refresh() {
+  updateStatus(await call('/api/status'));
+  await Promise.all([
+    refreshKernel().catch((error) => {
+      const message = error.message === '503: host_telemetry_permission_denied'
+        ? 'Host telemetry is blocked. Run sudo snap connect network-decode-console:network-observe, then reload.'
+        : `Host telemetry unavailable: ${error.message}`;
+      $('#kernel-note').textContent = message;
+      $('#interface-scope').textContent = message;
+      notify(message, true);
+    }),
+    refreshAgent(),
+    refreshHistory(),
+  ]);
+}
 
 $('#account-create').addEventListener('click', run(setupAccount, 'Local administrator account created.'));
 $('#account-sign-in').addEventListener('click', run(loginAccount, 'Admin signed in; saved host access restored.'));
@@ -909,16 +923,25 @@ $('#close-menu').addEventListener('click', () => {
 });
 showPage('settings', false);
 
-fetch('/health').then(async (response) => {
-  if (!response.ok) throw new Error('health unavailable');
-  const health = await response.json();
-  $('#host-name').textContent = health.host || 'Local host';
-  await loadAccountState();
-}).catch(() => {
-  $('#top-mode').textContent = 'Offline';
-  setBanner('Local firewall service is unavailable. Restart it and reload this page.', true);
-  notify('Cannot reach the local Node Guard service. Restart npm start and reload this page.', true);
-});
+async function initialize() {
+  try {
+    const response = await fetch('/health');
+    if (!response.ok) throw new Error('health unavailable');
+    const health = await response.json();
+    $('#host-name').textContent = health.host || 'Local host';
+  } catch {
+    $('#top-mode').textContent = 'Offline';
+    setBanner('Local Console service is unavailable. Check snap services network-decode-console and reload.', true);
+    notify('Cannot reach the local Console service. Check snap services network-decode-console.', true);
+    return;
+  }
+  try { await loadAccountState(); }
+  catch (error) {
+    setBanner('Console data could not load. Check the local Console service and reload.', true);
+    notify(`Console data could not load: ${error.message}`, true);
+  }
+}
+void initialize();
 setInterval(() => {
   if (!accountSignedIn || document.hidden) return;
   fetch('/api/account/session').then(async (response) => {

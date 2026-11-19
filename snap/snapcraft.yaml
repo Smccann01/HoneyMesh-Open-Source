@@ -1,7 +1,7 @@
 name: network-decode-console
 title: HoneyMesh Console
 base: core24
-version: '0.2.1-beta.11'
+version: '0.2.1-beta.12'
 summary: Local, observation-only HoneyMesh firewall console
 description: |
   A local operator console for observing Linux socket and interface snapshots,
