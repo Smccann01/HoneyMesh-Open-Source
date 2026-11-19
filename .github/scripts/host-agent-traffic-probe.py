@@ -34,7 +34,7 @@ def request(method, path, body=None):
 
 def ping():
     result = subprocess.run(
-        ["ping", "-I", "hm-strict-peer", "-c", "1", "-W", "1", "198.18.0.1"],
+        ["ip", "netns", "exec", "hm-snap-peer-ns", "ping", "-c", "1", "-W", "1", "198.18.0.1"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         check=False,
