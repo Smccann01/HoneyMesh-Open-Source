@@ -1,0 +1,54 @@
+name: Build Node Guard policy CLI Snap
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'node/node-guard/**'
+      - '.github/workflows/build-nodeguard-snap.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  snap:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test Node Guard source
+        run: |
+          cd node/node-guard
+          npm ci
+          npm test
+      - name: Build strict Snap candidate
+        id: build
+        uses: snapcore/action-build@v1
+        with:
+          path: node/node-guard
+      - name: Install and smoke-test candidate
+        env:
+          SNAP_FILE: ${{ steps.build.outputs.snap }}
+        run: |
+          sudo snap install --dangerous "$SNAP_FILE"
+          mkdir -p "$HOME/hm-nodeguard-ci"
+          cd "$HOME/hm-nodeguard-ci"
+          network-decode-nodeguard init --output policy.json
+          network-decode-nodeguard doctor policy.json
+          network-decode-nodeguard policy validate policy.json
+          network-decode-nodeguard policy test \
+            "$GITHUB_WORKSPACE/node/node-guard/examples/auth-policy.json" \
+            "$GITHUB_WORKSPACE/node/node-guard/examples/auth-observations.json" \
+            --at 2026-11-03T18:00:00Z
+          sudo snap remove --purge network-decode-nodeguard
+      - name: Record checksum
+        env:
+          SNAP_FILE: ${{ steps.build.outputs.snap }}
+        run: sha256sum "$SNAP_FILE" > NODEGUARD-SNAP-SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nodeguard-snap-candidate
+          path: |
+            ${{ steps.build.outputs.snap }}
+            NODEGUARD-SNAP-SHA256SUMS
+          retention-days: 7

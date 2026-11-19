@@ -1,0 +1,3 @@
+#!/bin/sh
+set -eu
+exec "$SNAP/bin/node" "$SNAP/lib/node_modules/@honeymesh/node-guard/bin/nodeguard.mjs" "$@"
