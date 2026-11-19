@@ -21,11 +21,14 @@ read-only `kernel-btf` plug is therefore not an approved Store design. The
 publisher must seek a purpose-specific interface or change BTF loading before
 submitting a public revision.
 
-The [crash/restart/purge CI run](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44626839684)
+The [lifecycle CI run](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44627883020)
 passed on disposable Ubuntu 24.04 runners for both agents. The strict diagnostic
 verified XDP detach after a forced process exit, restart in TEST with the same
-private configuration, key, and admin token, then purge removal of Snap state.
-This does not cover refresh, revert, a real host interface, or Store approval.
+private configuration, key, and admin token; a locally repacked Snap revision
+preserved that state through install and revert; purge removed Snap state. The
+repacked revision contained the same executable, so this does not qualify an
+application-version migration. It also does not cover a real host interface,
+non-purge snapshot recovery, or Store approval.
 
 Each candidate must be installed with `--devmode --dangerous` from a CI
 artifact, on a disposable Ubuntu 24.04 AMD64 host only. Neither package starts
@@ -37,20 +40,22 @@ interface for an unqualified test.
 
 Qualification before a Store beta:
 
-1. Complete refresh/revert, non-purge removal and restore, and conflicting-agent
-   checks on a disposable host. Record actual kernel and snapd logs.
+1. Complete a real application-version refresh, non-purge removal and restore,
+   and conflicting-agent checks on a disposable host. Record kernel and snapd
+   logs for failures and recovery.
 2. Resolve the `/sys/kernel/btf` Store blocker with Canonical or remove the
    runtime dependency, then obtain approval for the resulting strict interface
    set. Devmode is diagnostic and is not a release confinement model. If strict
    approval is unavailable, review a classic confinement request with Canonical.
-3. Prove config, certificates, and runtime state survive refresh; prove
-   backup, rollback, and purge behavior. Design an operator-controlled service
-   that never attaches a host interface on installation.
+3. Design an operator-controlled service that never attaches a host interface
+   on installation. Prove its restart, update, rollback, and uninstall behavior.
 4. Test on Ubuntu 24.04 AMD64, including unsupported-kernel and conflicting
    agent cases. Keep the default TEST mode and require local operator action
    before any enforcement.
 
 Track Store readiness in [issue #31](https://github.com/Smccann01/HoneyMesh-Open-Source/issues/31).
+The [Store interface review draft](STORE_INTERFACE_REVIEW_DRAFT.md) contains
+the exact question and evidence for Canonical; it has not been submitted.
 
 ## Proposed Store interface review
 
