@@ -1,4 +1,4 @@
-name: honeymesh-console
+name: network-decode-console
 title: HoneyMesh Console
 base: core24
 version: '0.2.1-beta.9'
@@ -21,7 +21,7 @@ platforms:
   amd64:
 
 apps:
-  honeymesh-console:
+  network-decode-console:
     command: bin/start-console
     daemon: simple
     plugs:

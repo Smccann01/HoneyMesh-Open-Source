@@ -11,14 +11,14 @@ The `network-observe` plug may require an explicit connection before host
 socket and interface snapshots are available:
 
 ```sh
-sudo snap connect honeymesh-console:network-observe
+sudo snap connect network-decode-console:network-observe
 ```
 
 After installation, open `http://127.0.0.1:8787` on the same host. Obtain the
 one-time local bootstrap token in your own terminal:
 
 ```sh
-sudo python3 -c 'import json; print(json.load(open("/var/snap/honeymesh-console/common/private/credentials.json"))["adminToken"])'
+sudo python3 -c 'import json; print(json.load(open("/var/snap/network-decode-console/common/private/credentials.json"))["adminToken"])'
 ```
 
 Create the local admin account with that token and a unique password. Do not
@@ -27,7 +27,7 @@ local; it is not a HoneyMesh license.
 
 For a developer build, run `snapcraft` from the repository root, install the
 resulting `.snap` with `sudo snap install --dangerous <file.snap>`, then inspect
-`snap services honeymesh-console` and `curl http://127.0.0.1:8787/health`.
+`snap services network-decode-console` and `curl http://127.0.0.1:8787/health`.
 The GitHub workflow builds and smoke-tests the exact candidate without
 publishing it. Registering a Snap Store name and releasing to a channel
 requires the project publisher's Snapcraft account.
