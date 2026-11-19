@@ -42,6 +42,23 @@ jobs:
           assert health['status'] == 'ok'
           assert health['scope'] == 'local_application_firewall_lab'
           PY
+          sudo snap connect honeymesh-console:network-observe
+          token=$(sudo python3 -c 'import json; print(json.load(open("/var/snap/honeymesh-console/common/private/credentials.json"))["adminToken"])')
+          curl --fail --silent --show-error -H "Authorization: Bearer $token" \
+            http://127.0.0.1:8787/api/status > /tmp/hm-snap-status.json
+          curl --fail --silent --show-error -H "Authorization: Bearer $token" \
+            http://127.0.0.1:8787/api/kernel/telemetry > /tmp/hm-snap-telemetry.json
+          unset token
+          python3 - <<'PY'
+          import json
+          with open('/tmp/hm-snap-status.json', encoding='utf-8') as handle:
+              status = json.load(handle)
+          with open('/tmp/hm-snap-telemetry.json', encoding='utf-8') as handle:
+              telemetry = json.load(handle)
+          assert status['policy']['mode'] == 'OBSERVE', status
+          assert telemetry['scope'] == 'current_process_network_namespace', telemetry
+          assert telemetry['source'] == 'Linux /proc/net socket and interface counters', telemetry
+          PY
           test "$(curl --silent -o /dev/null -w '%{http_code}' http://127.0.0.1:8787/api/host/grants)" != 200
           sudo snap stop honeymesh-console
           sudo snap remove --purge honeymesh-console
