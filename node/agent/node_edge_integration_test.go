@@ -78,27 +78,29 @@ func TestNodeEdgeObserveAndDurableReplay(t *testing.T) {
 	}
 }
 
-func TestNodeEdgeEntitlementRequiredBeforeEnforcement(t *testing.T) {
+func TestNodeEdgeFreeCanaryRequiresLocalEnforcementPolicy(t *testing.T) {
 	database := testNodeEdgeDB(t)
 	c := testNodeEdgeController(database, true, time.Now())
-	active := false
-	c.canEnforce = func() bool { return active }
+	t.Setenv("HM_NODE_PRO_ENTITLEMENT_FILE", "")
+	t.Setenv("HM_NODE_PRO_UNIT_ID", "")
+	modeEnforce := false
+	c.modeEnforce = func() bool { return modeEnforce }
 	applied := 0
 	c.apply = func(string) error { applied++; return nil }
-	status, err := c.onEvent(context.Background(), testNodeEdgeEvent("event_unlicensed_01"))
+	status, err := c.onEvent(context.Background(), testNodeEdgeEvent("event_test_mode_01"))
 	if err != nil || status != "observed" || applied != 0 {
-		t.Fatalf("unlicensed event: status=%s err=%v applied=%d", status, err, applied)
+		t.Fatalf("TEST event: status=%s err=%v applied=%d", status, err, applied)
 	}
 	var detail string
-	if err := database.QueryRow(`SELECT detail FROM node_edge_events WHERE event_id='event_unlicensed_01'`).Scan(&detail); err != nil || detail != "entitlement_inactive" {
-		t.Fatalf("unlicensed audit detail=%q err=%v", detail, err)
+	if err := database.QueryRow(`SELECT detail FROM node_edge_events WHERE event_id='event_test_mode_01'`).Scan(&detail); err != nil || detail != "mode_not_enforce" {
+		t.Fatalf("TEST audit detail=%q err=%v", detail, err)
 	}
-	active = true
-	licensed := testNodeEdgeEvent("event_licensed_02")
-	licensed.IP = "1.1.1.1"
-	status, err = c.onEvent(context.Background(), licensed)
+	modeEnforce = true
+	allowed := testNodeEdgeEvent("event_free_canary_02")
+	allowed.IP = "1.1.1.1"
+	status, err = c.onEvent(context.Background(), allowed)
 	if err != nil || status != "blocked" || applied != 1 {
-		t.Fatalf("licensed event: status=%s err=%v applied=%d", status, err, applied)
+		t.Fatalf("free canary event: status=%s err=%v applied=%d", status, err, applied)
 	}
 }
 

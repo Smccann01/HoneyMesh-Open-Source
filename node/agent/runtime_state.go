@@ -17,11 +17,12 @@ var runtimeStateMu sync.Mutex
 var configFingerprint string
 
 type runtimeSecurityState struct {
-	AllowlistBase *bool    `json:"allowlist_base"`
-	Whitelist     []string `json:"whitelist"`
-	TrustedPeers  []string `json:"trusted_peers"`
-	ScanPorts     int      `json:"scan_ports"`
-	ScanWindowS   int      `json:"scan_window_s"`
+	AllowlistBase          *bool    `json:"allowlist_base"`
+	Whitelist              []string `json:"whitelist"`
+	TrustedPeers           []string `json:"trusted_peers"`
+	ScanPorts              int      `json:"scan_ports"`
+	ScanWindowS            int      `json:"scan_window_s"`
+	AutomaticBanTTLSeconds *int     `json:"automatic_ban_ttl_seconds,omitempty"`
 }
 
 type runtimeState struct {
@@ -65,11 +66,12 @@ func currentRuntimeState() runtimeState {
 		MeshRevokedPeerCerts:         config.Mesh.RevokedPeerCerts,
 		Exchange:                     config.Exchange,
 		Security: runtimeSecurityState{
-			AllowlistBase: config.Security.AllowlistBase,
-			Whitelist:     config.Security.Whitelist,
-			TrustedPeers:  config.Security.TrustedPeers,
-			ScanPorts:     config.Security.ScanPorts,
-			ScanWindowS:   config.Security.ScanWindowS,
+			AllowlistBase:          config.Security.AllowlistBase,
+			Whitelist:              config.Security.Whitelist,
+			TrustedPeers:           config.Security.TrustedPeers,
+			ScanPorts:              config.Security.ScanPorts,
+			ScanWindowS:            config.Security.ScanWindowS,
+			AutomaticBanTTLSeconds: config.Security.AutomaticBanTTLSeconds,
 		},
 	}
 }
@@ -91,6 +93,7 @@ func applyRuntimeState(state runtimeState) {
 	config.Security.TrustedPeers = state.Security.TrustedPeers
 	config.Security.ScanPorts = state.Security.ScanPorts
 	config.Security.ScanWindowS = state.Security.ScanWindowS
+	config.Security.AutomaticBanTTLSeconds = state.Security.AutomaticBanTTLSeconds
 }
 
 func loadRuntimeState() error {

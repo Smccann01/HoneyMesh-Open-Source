@@ -150,13 +150,13 @@ func analyzeEvent(e Event) {
 
 	// Watchdog traps: immediate ban when traffic hits the port (even if trap listener is off).
 	if t, ok := config.Traps[e.Target]; ok && t.Watchdog {
-		policyBan(e.Attacker, e.TargetIP, e.Target, e.Service, "WATCHDOG", "watchdog trap hit", e.Entropy, 3, e.Interface, getWatchdogDuration())
+		policyBan(e.Attacker, e.TargetIP, e.Target, e.Service, "WATCHDOG", "watchdog trap hit", e.Entropy, 3, e.Interface, getAutomaticBanDuration())
 		return
 	}
 
 	if e.Type == "TRAP" {
 		if recordTrapHit(e.Attacker) {
-			policyBan(e.Attacker, e.TargetIP, e.Target, e.Service, "TRAP_HIT", "honeypot trigger", e.Entropy, 2, e.Interface, getBanDuration())
+			policyBan(e.Attacker, e.TargetIP, e.Target, e.Service, "TRAP_HIT", "honeypot trigger", e.Entropy, 2, e.Interface, getAutomaticBanDuration())
 		}
 		return
 	}
@@ -164,19 +164,19 @@ func analyzeEvent(e Event) {
 	recordScan(e.Attacker, e.Target)
 
 	if e.Entropy > 4.5 {
-		policyBan(e.Attacker, e.TargetIP, e.Target, e.Service, "HIGH_ENTROPY", "payload anomaly", e.Entropy, 1, e.Interface, getBanDuration())
+		policyBan(e.Attacker, e.TargetIP, e.Target, e.Service, "HIGH_ENTROPY", "payload anomaly", e.Entropy, 1, e.Interface, getAutomaticBanDuration())
 		return
 	}
 
 	if e.JA4 != "" && isJA4Blacklisted(e.JA4) {
 		log.Printf("[JA4] matched ip=%s ja4=%s", e.Attacker, e.JA4)
-		policyBan(e.Attacker, e.TargetIP, e.Target, e.Service, "JA4_MATCH", "blacklisted tls fingerprint", e.Entropy, 2, e.Interface, getBanDuration())
+		policyBan(e.Attacker, e.TargetIP, e.Target, e.Service, "JA4_MATCH", "blacklisted tls fingerprint", e.Entropy, 2, e.Interface, getAutomaticBanDuration())
 		return
 	}
 
 	if e.JA3 != "" && isJA3Blacklisted(e.JA3) {
 		log.Printf("[JA3] matched ip=%s ja3=%s", e.Attacker, e.JA3)
-		policyBan(e.Attacker, e.TargetIP, e.Target, e.Service, "JA3_MATCH", "legacy blacklisted tls fingerprint", e.Entropy, 2, e.Interface, getBanDuration())
+		policyBan(e.Attacker, e.TargetIP, e.Target, e.Service, "JA3_MATCH", "legacy blacklisted tls fingerprint", e.Entropy, 2, e.Interface, getAutomaticBanDuration())
 		return
 	}
 }
@@ -215,7 +215,7 @@ func recordScan(ip string, port string) {
 	}
 
 	if len(scanCounts[ip]) >= threshold {
-		policyBan(ip, config.BindIP, "multi-port", "tcp", "PORT_SCAN", "multi-port scan", 0, 2, "kernel", getBanDuration())
+		policyBan(ip, config.BindIP, "multi-port", "tcp", "PORT_SCAN", "multi-port scan", 0, 2, "kernel", getAutomaticBanDuration())
 	}
 }
 

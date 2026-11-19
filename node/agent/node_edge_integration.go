@@ -32,7 +32,6 @@ type nodeEdgeController struct {
 	attached      func() bool
 	allowed       func(string) bool
 	canaryAllowed func(string) bool
-	canEnforce    func() bool
 	apply         func(string) error
 	remove        func(string) error
 	now           func() time.Time
@@ -113,7 +112,7 @@ func (c *nodeEdgeController) onEvent(ctx context.Context, event agentbridge.Even
 	if err != nil {
 		return "", fmt.Errorf("node edge audit insert: %w", err)
 	}
-	if !c.autoBlock || !c.modeEnforce() || !c.attached() || !c.allowed(event.IP) || !c.canaryAllowed(event.IP) || (c.canEnforce != nil && !c.canEnforce()) {
+	if !c.autoBlock || !c.modeEnforce() || !c.attached() || !c.allowed(event.IP) || !c.canaryAllowed(event.IP) {
 		detail := "auto_block_off"
 		switch {
 		case !c.autoBlock:
@@ -123,8 +122,6 @@ func (c *nodeEdgeController) onEvent(ctx context.Context, event agentbridge.Even
 			detail = "no_attached_interface"
 		case !c.allowed(event.IP):
 			detail = "source_excluded"
-		case c.canEnforce != nil && !c.canEnforce():
-			detail = "entitlement_inactive"
 		default:
 			detail = "canary_excluded"
 		}
@@ -137,7 +134,7 @@ func (c *nodeEdgeController) onEvent(ctx context.Context, event agentbridge.Even
 			return "", err
 		}
 		banMutex.Lock()
-		if !c.modeEnforce() || !c.attached() || !c.allowed(event.IP) || !c.canaryAllowed(event.IP) || (c.canEnforce != nil && !c.canEnforce()) {
+		if !c.modeEnforce() || !c.attached() || !c.allowed(event.IP) || !c.canaryAllowed(event.IP) {
 			banMutex.Unlock()
 			_, _ = c.db.ExecContext(ctx, `UPDATE node_edge_events SET status='observed', detail='policy_changed' WHERE event_id=?`, event.EventID)
 			return "observed", nil
@@ -187,7 +184,7 @@ func (c *nodeEdgeController) onEvent(ctx context.Context, event agentbridge.Even
 		_, _ = c.db.ExecContext(ctx, `UPDATE node_edge_events SET status='rejected', detail='kernel_error' WHERE event_id=?`, event.EventID)
 		return "", err
 	}
-	if !c.modeEnforce() || !c.attached() || !c.allowed(event.IP) || !c.canaryAllowed(event.IP) || (c.canEnforce != nil && !c.canEnforce()) {
+	if !c.modeEnforce() || !c.attached() || !c.allowed(event.IP) || !c.canaryAllowed(event.IP) {
 		if err := c.remove(event.IP); err != nil {
 			c.trackBlock(event, expires)
 			banMutex.Unlock()

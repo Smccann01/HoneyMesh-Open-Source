@@ -108,6 +108,7 @@ type SecurityConfig struct {
 	StrictHeartbeatAddr      *bool             `json:"strict_heartbeat_addr"`
 	TrapBanHits              int               `json:"trap_ban_hits"`
 	TrapBanWindowS           int               `json:"trap_ban_window_s"`
+	AutomaticBanTTLSeconds   *int              `json:"automatic_ban_ttl_seconds,omitempty"`
 }
 
 type GeoPolicy struct {

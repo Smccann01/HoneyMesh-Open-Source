@@ -29,9 +29,6 @@ func licenseDisplayName() string {
 	if effectiveLicenseTier() == license.TierPro {
 		return "Pro"
 	}
-	if nodeProHostEntitled() {
-		return "Node Pro"
-	}
 	return "Community"
 }
 
