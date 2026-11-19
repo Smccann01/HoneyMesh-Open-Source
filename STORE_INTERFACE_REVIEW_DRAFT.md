@@ -34,6 +34,12 @@ replace an attached XDP program, and that normal removal followed by reinstall
 and Snap snapshot restore preserves private state without starting protection.
 An installed `.deb` agent conflict has not yet been tested.
 
+To test the BTF dependency directly, we disconnected only `kernel-btf` after
+the successful strict traffic and lifecycle probes. Both agents then failed
+CO-RE relocation with `no BTF found for kernel version` on the Ubuntu runner;
+neither attached XDP. This narrows the Store question to a required runtime
+input, rather than an untested convenience permission.
+
 The current [system-files interface documentation](https://snapcraft.io/docs/reference/interfaces/system-files-interface/)
 says Store acceptance excludes non-owned `/sys` paths. The kernel BTF files
 are needed for the current CO-RE loader, but HoneyMesh does not own them. We
@@ -57,6 +63,7 @@ are **not** asking for an exception through `system-files` without guidance.
 - [Strict packet-level test](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44621989489)
 - [Crash, restart, local revision revert, and purge test](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44627883020)
 - [Second-process conflict and snapshot restore test](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44630382291)
+- [BTF permission diagnostic](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44631434415)
 - [Release gate issue](https://github.com/Smccann01/HoneyMesh-Open-Source/issues/31)
 
 We will keep the Snaps in developer testing until the Store permission route,

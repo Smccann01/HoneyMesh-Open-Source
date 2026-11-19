@@ -21,13 +21,20 @@ read-only `kernel-btf` plug is therefore not an approved Store design. The
 publisher must seek a purpose-specific interface or change BTF loading before
 submitting a public revision.
 
+The [BTF permission diagnostic](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44631434415)
+confirmed that this is a runtime dependency for both agents on the tested
+Ubuntu runner. With only `kernel-btf` disconnected, each agent failed to load
+the CO-RE XDP program and reported that no kernel BTF was found; neither
+attached XDP. Reconnecting the plug restored the tested path. The current
+strict recipe cannot simply omit that permission.
+
 The [lifecycle CI run](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44627883020)
 passed on disposable Ubuntu 24.04 runners for both agents. The strict diagnostic
 verified XDP detach after a forced process exit, restart in TEST with the same
 private configuration, key, and admin token; a locally repacked Snap revision
 preserved that state through install and revert; purge removed Snap state. The
 repacked revision contained the same executable, so this does not qualify an
-application-version migration. It also does not cover a real host interface,
+application-version migration. It also does not cover a real host interface
 or Store approval.
 
 The [conflict and snapshot CI run](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44630382291)
