@@ -1,0 +1,19 @@
+#!/bin/sh
+set -eu
+if [ "$(id -u)" -ne 0 ]; then
+  echo 'Run setup as root: sudo snap run network-decode-core.init' >&2
+  exit 1
+fi
+umask 077
+state=${SNAP_COMMON:?SNAP_COMMON is required}
+install -d -m 0700 "$state"
+if [ -L "$state/honeymesh.json" ]; then
+  echo 'Refusing a symlinked configuration' >&2
+  exit 1
+fi
+if [ ! -e "$state/honeymesh.json" ]; then
+  install -m 0600 "$SNAP/config/honeymesh.json" "$state/honeymesh.json"
+fi
+"$SNAP/bin/init-local-certs.sh" "$state/certs"
+"$SNAP/bin/honeymesh" -config "$state/honeymesh.json" -state-dir "$state" -migrate-state
+echo "HoneyMesh Core pilot state is in $state. No service has started."

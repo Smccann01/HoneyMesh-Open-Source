@@ -1,0 +1,12 @@
+#!/bin/sh
+set -eu
+if [ "$(id -u)" -ne 0 ]; then
+  echo 'The XDP pilot requires root; run only on a disposable host' >&2
+  exit 1
+fi
+state=${SNAP_COMMON:?SNAP_COMMON is required}
+if [ ! -f "$state/honeymesh.json" ] || [ ! -f "$state/certs/node/node.key" ]; then
+  echo 'Run sudo snap run network-decode-node.init first' >&2
+  exit 1
+fi
+exec "$SNAP/bin/honeymesh" -config "$state/honeymesh.json" -state-dir "$state" "$@"

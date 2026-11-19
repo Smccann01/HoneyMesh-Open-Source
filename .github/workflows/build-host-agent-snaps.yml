@@ -1,0 +1,112 @@
+name: Build Core and Node developer Snaps
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'core/**'
+      - 'node/agent/**'
+      - '.github/workflows/build-host-agent-snaps.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  snap:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: core
+            snap_name: network-decode-core
+          - component: node/agent
+            snap_name: network-decode-node
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build developer candidate
+        id: build
+        uses: snapcore/action-build@v1
+        with:
+          path: ${{ matrix.component }}
+      - name: Install and check private first-run state
+        env:
+          SNAP_FILE: ${{ steps.build.outputs.snap }}
+          SNAP_NAME: ${{ matrix.snap_name }}
+        run: |
+          sudo snap install --devmode --dangerous "$SNAP_FILE"
+          sudo snap run "$SNAP_NAME.init"
+          sudo python3 - "$SNAP_NAME" <<'PY'
+          import json, pathlib, stat, sys
+          root = pathlib.Path('/var/snap') / sys.argv[1] / 'common'
+          config = root / 'honeymesh.json'
+          data = json.loads(config.read_text())
+          assert data['interfaces'] == []
+          assert data['trusted_network_sharing_enabled'] is False
+          assert data['trusted_mesh_network_enabled'] is False
+          assert stat.S_IMODE(config.stat().st_mode) == 0o600
+          assert (root / 'certs/node/node.key').is_file()
+          assert stat.S_IMODE((root / 'certs/node/node.key').stat().st_mode) == 0o600
+          assert (root / 'runtime-state.json').is_file()
+          PY
+          sudo snap run "$SNAP_NAME" -migrate-state
+      - name: Probe XDP on an isolated veth interface
+        env:
+          SNAP_NAME: ${{ matrix.snap_name }}
+        run: |
+          sudo ip link add hm-snap-test type veth peer name hm-snap-peer
+          sudo ip link set hm-snap-test up
+          sudo ip link set hm-snap-peer up
+          sudo python3 - "$SNAP_NAME" <<'PY'
+          import json, pathlib, sys
+          config = pathlib.Path('/var/snap') / sys.argv[1] / 'common/honeymesh.json'
+          data = json.loads(config.read_text())
+          assert data['interfaces'] == []
+          data['interfaces'] = ['hm-snap-test']
+          config.write_text(json.dumps(data) + '\n')
+          PY
+          sudo timeout --signal=TERM --kill-after=5s 25s snap run "$SNAP_NAME" > agent-probe.log 2>&1 &
+          probe_pid=$!
+          attached=0
+          for attempt in $(seq 1 20); do
+            if sudo ip -details link show hm-snap-test | grep -q 'prog/xdp'; then
+              attached=1
+              break
+            fi
+            if ! kill -0 "$probe_pid" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          if [ "$attached" -ne 1 ]; then
+            cat agent-probe.log
+            wait "$probe_pid" || true
+            exit 1
+          fi
+          echo 'XDP attached to isolated veth'
+          wait "$probe_pid" || true
+          if sudo ip -details link show hm-snap-test | grep -q 'prog/xdp'; then
+            cat agent-probe.log
+            echo 'XDP remained attached after agent exit' >&2
+            exit 1
+          fi
+          echo 'XDP detached after agent exit'
+      - name: Remove developer candidate and test interface
+        if: always()
+        env:
+          SNAP_NAME: ${{ matrix.snap_name }}
+        run: |
+          sudo snap remove --purge "$SNAP_NAME" || true
+          sudo ip link del hm-snap-test 2>/dev/null || true
+      - name: Record checksum
+        env:
+          SNAP_FILE: ${{ steps.build.outputs.snap }}
+        run: sha256sum "$SNAP_FILE" > SNAP-SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.snap_name }}-developer-candidate
+          path: |
+            ${{ steps.build.outputs.snap }}
+            SNAP-SHA256SUMS
+          retention-days: 7

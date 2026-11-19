@@ -1,0 +1,49 @@
+name: network-decode-node
+title: HoneyMesh Node Kernel Pilot
+base: core24
+version: '2.3.7-rc1-nodepro1'
+summary: Developer pilot for HoneyMesh Node host protection
+description: |
+  Developer-only Node agent Snap candidate. It needs host eBPF/XDP access and is
+  not qualified for the Snap Store or production. Installation starts no
+  service. Setup creates per-host credentials, then an operator may run it
+  manually on a disposable Ubuntu host with an explicitly selected test
+  interface. The default config selects no interface and no sharing.
+license: Apache-2.0 AND (BSD-2-Clause OR GPL-2.0-only)
+icon: snap/gui/icon.png
+source-code: https://github.com/Smccann01/HoneyMesh-Open-Source/tree/main/node/agent
+issues: https://github.com/Smccann01/HoneyMesh-Open-Source/issues/31
+grade: devel
+confinement: devmode
+platforms:
+  amd64:
+
+apps:
+  network-decode-node:
+    command: bin/run-agent
+    plugs: [network, network-bind, network-control, system-trace, firewall-control]
+  init:
+    command: bin/init-agent
+
+parts:
+  agent:
+    plugin: nil
+    source: .
+    build-snaps: [go/1.26/stable]
+    override-build: |
+      export GOTOOLCHAIN=go1.26.10 CGO_ENABLED=0
+      cd "$CRAFT_PART_SRC"
+      go mod download
+      install -d "$CRAFT_PART_INSTALL/bin"
+      go build -trimpath -buildvcs=false -ldflags=-buildid= -o "$CRAFT_PART_INSTALL/bin/honeymesh" ./
+  runtime:
+    plugin: nil
+    source: .
+    stage-packages: [openssl, ca-certificates]
+    override-build: |
+      install -Dm0755 "$CRAFT_PART_SRC/snap/launcher/init-agent" "$CRAFT_PART_INSTALL/bin/init-agent"
+      install -Dm0755 "$CRAFT_PART_SRC/snap/launcher/run-agent" "$CRAFT_PART_INSTALL/bin/run-agent"
+      install -Dm0755 "$CRAFT_PART_SRC/packaging/init-local-certs.sh" "$CRAFT_PART_INSTALL/bin/init-local-certs.sh"
+      install -Dm0644 "$CRAFT_PART_SRC/packaging/honeymesh.community.json" "$CRAFT_PART_INSTALL/config/honeymesh.json"
+      install -Dm0644 "$CRAFT_PART_SRC/LICENSE" "$CRAFT_PART_INSTALL/licenses/PROJECT-LICENSE"
+      cp -a "$CRAFT_PART_SRC/LICENSES/." "$CRAFT_PART_INSTALL/licenses/"
