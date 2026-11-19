@@ -28,7 +28,15 @@ private configuration, key, and admin token; a locally repacked Snap revision
 preserved that state through install and revert; purge removed Snap state. The
 repacked revision contained the same executable, so this does not qualify an
 application-version migration. It also does not cover a real host interface,
-non-purge snapshot recovery, or Store approval.
+or Store approval.
+
+The [conflict and snapshot CI run](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44630382291)
+passed for both agents. While an explicitly started service held XDP on an
+isolated veth, a second process of the same Snap refused to start without
+replacing the first XDP program. After normal Snap removal, reinstall and
+snapshot restore recovered the same private configuration, key and admin token;
+the service remained disabled and XDP detached. This does not test coexistence
+with a separately installed `.deb` agent.
 
 The [opt-in service CI run](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44629269694)
 passed for both agents. The separate
@@ -58,17 +66,17 @@ Never select a critical interface for an unqualified test.
 
 Qualification before a Store beta:
 
-1. Complete a real application-version refresh, non-purge removal and restore,
-   and conflicting-agent checks on a disposable host. Record kernel and snapd
-   logs for failures and recovery.
+1. Complete a real application-version refresh and test coexistence with an
+   installed `.deb` agent on a disposable host. Record kernel and snapd logs
+   for failures and recovery.
 2. Resolve the `/sys/kernel/btf` Store blocker with Canonical or remove the
    runtime dependency, then obtain approval for the resulting strict interface
    set. Devmode is diagnostic and is not a release confinement model. If strict
    approval is unavailable, review a classic confinement request with Canonical.
 3. Qualify the opt-in service on a disposable host across reboot, a real
    application update, rollback, and uninstall, including a failed startup.
-4. Test on Ubuntu 24.04 AMD64, including unsupported-kernel and conflicting
-   agent cases. Keep the default TEST mode and require local operator action
+4. Test on Ubuntu 24.04 AMD64, including unsupported-kernel and missing
+   permission cases. Keep the default TEST mode and require local operator action
    before any enforcement.
 
 Track Store readiness in [issue #31](https://github.com/Smccann01/HoneyMesh-Open-Source/issues/31).
