@@ -1,0 +1,13 @@
+#!/bin/sh
+set -eu
+
+# The store candidate runs only the local observation console. Host control
+# remains a separate, explicitly qualified installation path.
+export HM_HOST_ACTIONS_ENABLED=0
+export LAB_ENFORCE=0
+export LAB_PORT=8787
+export HM_CONSOLE_STATE_DIR="$SNAP_COMMON/private"
+
+mkdir -p "$HM_CONSOLE_STATE_DIR"
+chmod 0700 "$HM_CONSOLE_STATE_DIR"
+exec "$SNAP/bin/node" "$SNAP/lib/node_modules/network-decode-firewall-console/src/server.mjs"

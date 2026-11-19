@@ -1,0 +1,58 @@
+name: Build observation-only Console Snap
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'snap/**'
+      - 'firewall-console/**'
+      - '.github/workflows/build-console-snap.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  snap:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test Console source
+        run: |
+          cd firewall-console
+          npm ci
+          npm test
+      - name: Build strict Snap candidate
+        id: build
+        uses: snapcore/action-build@v1
+      - name: Install and smoke-test candidate
+        env:
+          SNAP_FILE: ${{ steps.build.outputs.snap }}
+        run: |
+          sudo snap install --dangerous "$SNAP_FILE"
+          snap services honeymesh-console
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8787/health > /tmp/hm-snap-health.json; then break; fi
+            sleep 1
+          done
+          python3 - <<'PY'
+          import json
+          with open('/tmp/hm-snap-health.json', encoding='utf-8') as handle:
+              health = json.load(handle)
+          assert health['status'] == 'ok'
+          assert health['scope'] == 'local_application_firewall_lab'
+          PY
+          test "$(curl --silent -o /dev/null -w '%{http_code}' http://127.0.0.1:8787/api/host/grants)" != 200
+          sudo snap stop honeymesh-console
+          sudo snap remove --purge honeymesh-console
+      - name: Record checksum
+        env:
+          SNAP_FILE: ${{ steps.build.outputs.snap }}
+        run: sha256sum "$SNAP_FILE" > SNAP-SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: honeymesh-console-snap-candidate
+          path: |
+            ${{ steps.build.outputs.snap }}
+            SNAP-SHA256SUMS
+          retention-days: 7
