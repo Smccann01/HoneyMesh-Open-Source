@@ -30,13 +30,31 @@ repacked revision contained the same executable, so this does not qualify an
 application-version migration. It also does not cover a real host interface,
 non-purge snapshot recovery, or Store approval.
 
+The [opt-in service CI run](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44629269694)
+passed for both agents. The separate
+[developer-package build](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44629269782)
+confirmed the service is disabled and inactive immediately after installation.
+In strict diagnostics, explicit operator start attached XDP only to the
+selected isolated veth interface while the agent remained in TEST; stop and
+disable detached it again. This is not a test of a real host interface.
+
 Each candidate must be installed with `--devmode --dangerous` from a CI
 artifact, on a disposable Ubuntu 24.04 AMD64 host only. Neither package starts
 a service on installation. Run `sudo snap run network-decode-core.init` or
 `sudo snap run network-decode-node.init` to create private configuration and
 certificates under `/var/snap/<snap-name>/common/`. Review the configuration
-before running `sudo snap run <snap-name>` manually. Never select a critical
-interface for an unqualified test.
+before starting the service. For an isolated disposable-host test, the operator
+can manage the candidate service with the matching name:
+
+```sh
+sudo snap services network-decode-core
+sudo snap start --enable network-decode-core
+sudo snap stop --disable network-decode-core
+```
+
+Substitute `network-decode-node` for the Node agent. The service will start on
+boot only after `snap start --enable`; use `snap stop --disable` for recovery.
+Never select a critical interface for an unqualified test.
 
 Qualification before a Store beta:
 
@@ -47,8 +65,8 @@ Qualification before a Store beta:
    runtime dependency, then obtain approval for the resulting strict interface
    set. Devmode is diagnostic and is not a release confinement model. If strict
    approval is unavailable, review a classic confinement request with Canonical.
-3. Design an operator-controlled service that never attaches a host interface
-   on installation. Prove its restart, update, rollback, and uninstall behavior.
+3. Qualify the opt-in service on a disposable host across reboot, a real
+   application update, rollback, and uninstall, including a failed startup.
 4. Test on Ubuntu 24.04 AMD64, including unsupported-kernel and conflicting
    agent cases. Keep the default TEST mode and require local operator action
    before any enforcement.
