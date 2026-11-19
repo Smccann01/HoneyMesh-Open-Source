@@ -661,23 +661,24 @@ async function refreshKernel() {
 
 async function refreshAgent() {
   const data = await call('/api/agent/overview', undefined, true);
+  const notLinked = !data.connected && data.reason === 'not_configured';
   agentMode = data.connected ? data.mode : null;
   agentConnected = data.connected === true;
-  $('#bridge-mode').textContent = data.connected ? 'Connected' : 'Disconnected';
+  $('#bridge-mode').textContent = data.connected ? 'Connected' : notLinked ? 'Not linked' : 'Disconnected';
   $('#overview-mode').textContent = data.connected ? data.mode : 'Unavailable';
   $('#overview-blocks').textContent = data.connected ? number.format(data.local_blocks) : '—';
   $('#overview-pending').textContent = data.connected ? number.format(data.pending_bans) : '—';
-  $('#overview-primary').textContent = !data.connected ? 'Agent unavailable' : data.mode === 'TEST' ? 'Observing in TEST' : data.mode === 'ENFORCE' ? 'Enforcement active' : `Host mode: ${data.mode}`;
-  $('#overview-summary').textContent = data.connected ? `Agent ${data.status}. Last checked ${new Date(data.captured_at).toLocaleTimeString()}.` : `The local HoneyMesh agent could not be reached: ${data.reason}.`;
-  $('#top-agent-state').textContent = data.connected ? 'Agent connected' : 'Agent offline';
+  $('#overview-primary').textContent = notLinked ? 'Agent not linked' : !data.connected ? 'Agent unavailable' : data.mode === 'TEST' ? 'Observing in TEST' : data.mode === 'ENFORCE' ? 'Enforcement active' : `Host mode: ${data.mode}`;
+  $('#overview-summary').textContent = data.connected ? `Agent ${data.status}. Last checked ${new Date(data.captured_at).toLocaleTimeString()}.` : notLinked ? 'This Console has not been linked to a local HoneyMesh agent. Local observations remain available; see the Snap install manual to link an existing agent.' : `The local HoneyMesh agent could not be reached: ${data.reason}.`;
+  $('#top-agent-state').textContent = data.connected ? 'Agent connected' : notLinked ? 'Agent not linked' : 'Agent offline';
   $('#top-agent-state').classList.toggle('ok', data.connected);
-  $('#top-agent-state').classList.toggle('offline', !data.connected);
-  $('#side-agent-state').textContent = data.connected ? 'Agent connected' : 'Agent unavailable';
+  $('#top-agent-state').classList.toggle('offline', !data.connected && !notLinked);
+  $('#side-agent-state').textContent = data.connected ? 'Agent connected' : notLinked ? 'Agent not linked' : 'Agent unavailable';
   $('.status-dot').classList.toggle('online', data.connected);
-  $('.status-dot').classList.toggle('error', !data.connected);
+  $('.status-dot').classList.toggle('error', !data.connected && !notLinked);
   $('#top-mode').textContent = data.connected ? data.mode : 'Unavailable';
   $('#top-mode').classList.toggle('live', data.connected && data.mode === 'ENFORCE');
-  setBanner(data.connected ? `HoneyMesh ${data.mode} · agent ${data.status} · checked ${new Date(data.captured_at).toLocaleTimeString()}` : `HoneyMesh agent unavailable · ${data.reason}`, !data.connected);
+  setBanner(data.connected ? `HoneyMesh ${data.mode} · agent ${data.status} · checked ${new Date(data.captured_at).toLocaleTimeString()}` : notLinked ? 'Optional HoneyMesh agent not linked. See the Snap install manual.' : `HoneyMesh agent unavailable · ${data.reason}`, !data.connected && !notLinked);
   const hostLink = $('#host-console-link');
   hostLink.hidden = !data.connected || !data.controls_available;
   if (!hostLink.hidden) hostLink.href = data.console_url;
@@ -689,11 +690,11 @@ async function refreshAgent() {
   if (!settingsLink.hidden) settingsLink.href = data.console_url;
   $('#settings-soc-note').textContent = data.connected
     ? 'The SOC is reachable from this service. If Chrome shows ERR_SSL_VERSION_OR_CIPHER_MISMATCH, this installed agent needs its Ed25519 leaf rotated to ECDSA. After rotation, your browser may show a private-CA warning. The SOC login is separate from this console account.'
-    : `The pinned HoneyMesh SOC is unavailable (${data.reason}). Check the agent service and certificate pin before opening host controls.`;
+    : notLinked ? 'No local agent is linked to this Console. See the Snap install manual in the sidebar to link an existing HoneyMesh Core agent.' : `The pinned HoneyMesh SOC is unavailable (${data.reason}). Check the agent service and certificate pin before opening host controls.`;
   updateBlockReadiness();
   $('#agent-note').textContent = data.connected
     ? `Live pinned HoneyMesh status captured ${new Date(data.captured_at).toLocaleTimeString()}. The host console requires its own operator login.`
-    : `HoneyMesh read-only connection unavailable (${data.reason}). Host controls are unavailable.`;
+    : notLinked ? 'No local agent is linked. Local observations remain available; see the Snap install manual to link an existing agent.' : `HoneyMesh read-only connection unavailable (${data.reason}). Host controls are unavailable.`;
 }
 
 async function refresh() { updateStatus(await call('/api/status')); await Promise.all([refreshKernel(), refreshAgent(), refreshHistory()]); }
