@@ -1,0 +1,51 @@
+name: Build and attest Node Guard install pack
+
+on:
+  workflow_dispatch:
+  push:
+    tags: [node-guard-v0.2.0-alpha.6-pilot.1]
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: node/node-guard/package-lock.json
+      - name: Test and pack Node Guard
+        run: |
+          cd node/node-guard
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm test
+          npm run smoke:package
+          mkdir -p "$GITHUB_WORKSPACE/dist/node-guard"
+          npm pack --pack-destination "$GITHUB_WORKSPACE/dist/node-guard" --silent
+          (cd "$GITHUB_WORKSPACE/dist/node-guard" && sha256sum *.tgz > SHA256SUMS && sha256sum -c SHA256SUMS)
+      - name: Attest pack and checksum manifest
+        uses: actions/attest@v4
+        with:
+          subject-path: dist/node-guard/**
+      - name: Upload tested pack
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-guard-pilot-${{ github.sha }}
+          path: dist/node-guard/
+          retention-days: 14
+      - name: Publish pilot pack
+        if: github.ref == 'refs/tags/node-guard-v0.2.0-alpha.6-pilot.1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/node-guard/* \
+            --repo "$GITHUB_REPOSITORY" --prerelease \
+            --title 'Node Guard 0.2.0 alpha.6 pilot install pack' \
+            --notes 'Free Node.js SDK pilot pack. Requires Node.js 20 or newer and integration with your application. Defaults to OBSERVE; review trusted client-IP attribution before ENFORCE. Verify SHA256SUMS and GitHub attestation before installing.'
