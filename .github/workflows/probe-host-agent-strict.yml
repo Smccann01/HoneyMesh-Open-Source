@@ -1,0 +1,88 @@
+name: Probe strict confinement for host agents
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/probe-host-agent-strict.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: core
+            snap_name: network-decode-core
+          - component: node/agent
+            snap_name: network-decode-node
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Convert candidate to strict for diagnostic build
+        env:
+          COMPONENT: ${{ matrix.component }}
+        run: |
+          sed -i 's/^confinement: devmode$/confinement: strict/' "$COMPONENT/snap/snapcraft.yaml"
+          grep -q '^confinement: strict$' "$COMPONENT/snap/snapcraft.yaml"
+      - name: Build strict diagnostic Snap
+        id: build
+        uses: snapcore/action-build@v1
+        with:
+          path: ${{ matrix.component }}
+      - name: Probe BPF and XDP with strict confinement
+        env:
+          SNAP_FILE: ${{ steps.build.outputs.snap }}
+          SNAP_NAME: ${{ matrix.snap_name }}
+        run: |
+          sudo snap install --dangerous "$SNAP_FILE"
+          for plug in network-control system-trace firewall-control; do
+            sudo snap connect "$SNAP_NAME:$plug" || true
+          done
+          sudo snap run "$SNAP_NAME.init"
+          sudo ip link add hm-strict-test type veth peer name hm-strict-peer
+          sudo ip link set hm-strict-test up
+          sudo ip link set hm-strict-peer up
+          sudo python3 - "$SNAP_NAME" <<'PY'
+          import json, pathlib, sys
+          config = pathlib.Path('/var/snap') / sys.argv[1] / 'common/honeymesh.json'
+          data = json.loads(config.read_text())
+          assert data['interfaces'] == []
+          data['interfaces'] = ['hm-strict-test']
+          config.write_text(json.dumps(data) + '\n')
+          PY
+          sudo timeout --signal=TERM --kill-after=5s 15s snap run "$SNAP_NAME" > strict-probe.log 2>&1 &
+          probe_pid=$!
+          attached=0
+          for attempt in $(seq 1 12); do
+            if sudo ip -details link show hm-strict-test | grep -q 'prog/xdp'; then
+              attached=1
+              break
+            fi
+            if ! kill -0 "$probe_pid" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          wait "$probe_pid" || true
+          if [ "$attached" -eq 1 ]; then
+            echo 'STRICT_PROBE=attached'
+          else
+            echo 'STRICT_PROBE=blocked'
+            grep -E 'Failed to load eBPF|Attach failed|attach XDP|operation not permitted|permission denied' strict-probe.log || true
+            sudo journalctl -k --no-pager -n 150 | grep "snap.$SNAP_NAME" | grep 'DENIED' | tail -20 || true
+          fi
+          if sudo ip -details link show hm-strict-test | grep -q 'prog/xdp'; then
+            echo 'STRICT_PROBE=detach_failed'
+          fi
+      - name: Remove diagnostic Snap and interface
+        if: always()
+        env:
+          SNAP_NAME: ${{ matrix.snap_name }}
+        run: |
+          sudo snap remove --purge "$SNAP_NAME" || true
+          sudo ip link del hm-strict-test 2>/dev/null || true
