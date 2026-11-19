@@ -11,7 +11,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -55,3 +55,21 @@ jobs:
           diff -u \
             <(cd "$RUNNER_TEMP/hm-build-a" && find . -type f -print0 | sort -z | xargs -0 sha256sum) \
             <(cd "$RUNNER_TEMP/hm-build-b" && find . -type f -print0 | sort -z | xargs -0 sha256sum)
+      - name: Build Node Pro packages twice
+        run: |
+          mkdir -p "$RUNNER_TEMP/node-pro-a" "$RUNNER_TEMP/node-pro-b"
+          (cd node/agent && DIST_DIR="$RUNNER_TEMP/node-pro-a" bash tools/build-linux-packs.sh)
+          (cd node/agent && DIST_DIR="$RUNNER_TEMP/node-pro-b" bash tools/build-linux-packs.sh)
+          python3 node/agent/tools/verify-release-packs.py "$RUNNER_TEMP/node-pro-a"
+          python3 node/agent/tools/verify-release-packs.py "$RUNNER_TEMP/node-pro-b"
+          diff -u \
+            <(cd "$RUNNER_TEMP/node-pro-a" && find . -type f -print0 | sort -z | xargs -0 sha256sum) \
+            <(cd "$RUNNER_TEMP/node-pro-b" && find . -type f -print0 | sort -z | xargs -0 sha256sum)
+      - name: Build Firewall Console bundle twice
+        run: |
+          bash firewall-console/packaging/build-free-pilot-bundle.sh "$RUNNER_TEMP/firewall-a"
+          bash firewall-console/packaging/build-free-pilot-bundle.sh "$RUNNER_TEMP/firewall-b"
+          diff -u \
+            <(cd "$RUNNER_TEMP/firewall-a" && sha256sum * | sort) \
+            <(cd "$RUNNER_TEMP/firewall-b" && sha256sum * | sort)
+          (cd "$RUNNER_TEMP/firewall-a" && sha256sum -c SHA256SUMS)
