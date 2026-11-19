@@ -28,4 +28,4 @@ The [Core pilot release](https://github.com/Smccann01/HoneyMesh-Open-Source/rele
 
 See [release readiness and host support](RELEASE_READINESS.md) for the tested environment, current limits, and the gates before a signed installer release.
 
-HoneyMesh 2.0 Adaptive Trust is developed separately on the [honeymesh-2.0 branch](https://github.com/Smccann01/HoneyMesh-Open-Source/tree/honeymesh-2.0). That branch is source-only while its package identity, migration, and host qualification are being designed. The current pilot release line remains on `main`.
+HoneyMesh 2.0 Adaptive Trust is developed separately in a private repository. It is outside this public Snap Store release line. The current open-source pilot release line remains on `main`.
