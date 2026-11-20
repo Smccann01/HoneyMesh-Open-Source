@@ -52,6 +52,31 @@ snapshot restore recovered the same private configuration, key and admin token;
 the service remained disabled and XDP detached. This does not test coexistence
 with a separately installed `.deb` agent.
 
+In a disposable Ubuntu 24.04 VM, the released RC6 `.deb` service occupied
+`127.0.0.1:9000` and `127.0.0.1:8443`. An explicit start of the earlier Core
+Snap candidate then failed on the mesh port and systemd retried it. XDP did
+detach after the failed process exited. The updated Core Snap checks the mesh
+port before starting the agent and refuses to attach XDP when another service
+owns it. Operators must stop and disable `honeymesh.service` before enabling
+the Snap; do not leave both services enabled for reboot. This port check is a
+startup guard, not proof that two agents can share one protected interface.
+
+The revised Core candidate was also exercised in a disposable Ubuntu 24.04
+AMD64 QEMU VM with kernel `6.8.0-147-generic` and an isolated `hm-snap-test`
+veth. The [strict artifact from run 44669304695](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44669304695)
+had SHA-256 `cbc86b2d6a39da85ebcbcbee0d8436fd8add50647668f2e6a765051d4d2fc685`.
+An in-place update from `2.3.6-rc6-corefirewall4` to
+`2.3.6-rc6-corefirewall4+s1` reported the new binary version and preserved the
+private configuration, key and admin token, and authenticated TEST mode. A
+revert preserved the same state; the service was disabled by the revert and
+required an explicit `snap start --enable` to resume. After updating again,
+the installed RC6 `.deb` agent held the mesh port and the Snap launcher
+refused to start with an actionable message before attaching XDP. Stopping
+and disabling the `.deb` restored the Snap service and XDP attachment.
+Rebooting the VM then restored the opt-in Snap service in TEST with the same
+private state and XDP attached only to the isolated veth. These tests did not
+exercise a production interface or obtain Store approval.
+
 The [opt-in service CI run](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44629269694)
 passed for both agents. The separate
 [developer-package build](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44629269782)
@@ -89,15 +114,15 @@ provides BTF, and verify the permission connection. Do not bypass the check.
 
 Qualification before a Store beta:
 
-1. Complete a real application-version refresh and test coexistence with an
-   installed `.deb` agent on a disposable host. Record kernel and snapd logs
-   for failures and recovery.
+1. Keep the disposable-host update, rollback, reboot, and `.deb` conflict
+   evidence above current as the package evolves. Do not run the `.deb` and
+   Snap agents together on a protected interface.
 2. Resolve the `/sys/kernel/btf/vmlinux` Store blocker with Canonical or remove the
    runtime dependency, then obtain approval for the resulting strict interface
    set. Devmode is diagnostic and is not a release confinement model. If strict
    approval is unavailable, review a classic confinement request with Canonical.
-3. Qualify the opt-in service on a disposable host across reboot, a real
-   application update, rollback, and uninstall, including a failed startup.
+3. Repeat the opt-in service, update, rollback, uninstall, and failed-startup
+   checks on each proposed Store candidate before release.
 4. Test on Ubuntu 24.04 AMD64, including unsupported-kernel and missing
    permission cases. Keep the default TEST mode and require local operator action
    before any enforcement.

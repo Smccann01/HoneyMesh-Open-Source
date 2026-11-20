@@ -26,7 +26,7 @@ import (
 	"honeymesh/internal/mesh"
 )
 
-const Version = "v2.3.6-rc6-corefirewall4"
+var Version = "v2.3.6-rc6-corefirewall4"
 
 func printStartupBanner() {
 	fmt.Println("\x1b[38;5;208m" +
@@ -57,11 +57,16 @@ func main() {
 	joinUrlFlag := flag.String("join", "", "Join mesh master (URL)")
 	joinTokenFlag := flag.String("t", "", "Join token")
 	registerExchangeFlag := flag.String("register-exchange", "", "Register this node with NetTools.cloud (base URL)")
+	versionFlag := flag.Bool("version", false, "Print agent version and exit")
 	migrateStateFlag := flag.Bool("migrate-state", false, "Create private runtime state from the operator config and exit")
 	enrollTokenFlag := flag.String("enroll-token", "", "NetTools.cloud enrollment token")
 	repairFlag := flag.Bool("repair", false, "Repair/Regenerate local identity")
 	setClusterIDFlag := flag.String("set-cluster-id", "", "Manually set cluster ID")
 	flag.Parse()
+	if *versionFlag {
+		fmt.Println(Version)
+		return
+	}
 	if abs, err := filepath.Abs(configFile); err == nil {
 		configFile = abs
 	} else {

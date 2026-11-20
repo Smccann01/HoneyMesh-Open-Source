@@ -142,7 +142,7 @@ attack_max_mem="$(awk -F= '/^max_rss_mb=/{print $2}' "$ATTACK_SUMMARY")"
   echo "- timestamp_utc: $STAMP"
   echo "- host: $(hostname)"
   echo "- pid: $PID"
-  echo "- honeymesh_version: $(awk -F\" '/const Version = /{print $2}' "$ROOT_DIR/main.go" | head -n1)"
+  echo "- honeymesh_version: $(awk -F\" '/^var Version = /{print $2}' "$ROOT_DIR/main.go" | head -n1)"
   echo "- latency_phase: $LAT_STATUS"
   echo
   echo "## Summary"

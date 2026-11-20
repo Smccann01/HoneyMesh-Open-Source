@@ -4,13 +4,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-version_line="$(rg -n 'const Version = ' "$ROOT_DIR/main.go" | head -n 1 || true)"
+version_line="$(rg -m 1 '^var Version = "[^"]+"$' "$ROOT_DIR/main.go" || true)"
 if [[ -z "$version_line" ]]; then
   echo "ERROR: unable to determine version from main.go" >&2
   exit 1
 fi
 
-VERSION="$(printf "%s" "$version_line" | sed -E 's/.*const Version = "([^"]+)".*/\1/')"
+VERSION="$(printf "%s" "$version_line" | sed -E 's/^var Version = "([^"]+)"$/\1/')"
 if [[ -z "$VERSION" ]]; then
   echo "ERROR: version parsed empty" >&2
   exit 1
