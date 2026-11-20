@@ -20,13 +20,13 @@ if [[ "$(go version)" != go\ version\ go1.26.10\ * ]]; then
   exit 1
 fi
 
-version_line="$(rg -n 'const Version = ' main.go | head -n 1 || true)"
+version_line="$(rg -m 1 '^var Version = "[^"]+"$' main.go || true)"
 if [[ -z "$version_line" ]]; then
-  echo "ERROR: could not find Version constant in main.go" >&2
+  echo "ERROR: could not find Version declaration in main.go" >&2
   exit 1
 fi
 
-VERSION_RAW="$(printf '%s' "$version_line" | sed -E 's/.*const Version = "([^"]+)".*/\1/')"
+VERSION_RAW="$(printf '%s' "$version_line" | sed -E 's/^var Version = "([^"]+)"$/\1/')"
 VERSION="${VERSION_RAW#v}"
 RPM_VERSION="$(printf '%s' "$VERSION" | sed 's/-.*$//')"
 RPM_RELEASE_SUFFIX="$(printf '%s' "$VERSION" | sed -n 's/^[^-]*-\(.*\)$/\1/p' | tr '-' '_' )"
