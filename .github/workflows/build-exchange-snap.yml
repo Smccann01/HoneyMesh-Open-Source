@@ -63,7 +63,7 @@ jobs:
             echo 'Exchange unexpectedly listens on a public interface' >&2
             exit 1
           fi
-          sudo python3 .github/scripts/exchange-snap-auth-probe.py
+          sudo python3 .github/scripts/exchange-snap-auth-probe.py --expected-nodes=0 --enroll
           sudo snap run network-decode-exchange.backup
           sudo find /var/snap/network-decode-exchange/common/private/backups \
             -maxdepth 1 -type f -name '*.db' -size +0c | grep -q .
@@ -81,7 +81,7 @@ jobs:
             sleep 1
           done
           test "$code" = 401
-          sudo python3 .github/scripts/exchange-snap-auth-probe.py
+          sudo python3 .github/scripts/exchange-snap-auth-probe.py --expected-nodes=1
           sudo snap restart network-decode-exchange
           for attempt in $(seq 1 30); do
             code=$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8790/api/admin/session || true)
@@ -89,7 +89,7 @@ jobs:
             sleep 1
           done
           test "$code" = 401
-          sudo python3 .github/scripts/exchange-snap-auth-probe.py
+          sudo python3 .github/scripts/exchange-snap-auth-probe.py --expected-nodes=1
           sudo snap stop --disable network-decode-exchange
           sudo snap remove --purge network-decode-exchange
       - name: Record checksum
