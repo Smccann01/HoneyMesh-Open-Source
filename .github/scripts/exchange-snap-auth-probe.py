@@ -2,6 +2,7 @@
 """Exercise installed Exchange admin auth without printing generated credentials."""
 
 import base64
+import argparse
 import hashlib
 import hmac
 import json
@@ -10,6 +11,11 @@ import struct
 import time
 import urllib.error
 import urllib.request
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--expected-nodes", type=int, required=True)
+parser.add_argument("--enroll", action="store_true")
+args = parser.parse_args()
 
 credentials = pathlib.Path("/var/snap/network-decode-exchange/common/private/admin-credentials.txt")
 values = dict(line.split(": ", 1) for line in credentials.read_text().splitlines() if ": " in line)
@@ -40,6 +46,21 @@ assert status == 200 and payload["admin"]["email"] == values["Email"]
 cookie = response_headers["Set-Cookie"].split(";", 1)[0]
 status, payload, _ = request("/api/admin/status", cookie=cookie)
 assert status == 200 and payload["clusterId"] == "example-cluster" and payload["sharingEnabled"] is False
+assert payload["enrolledNodes"] == args.expected_nodes
 status, payload, _ = request("/api/admin/enrollment-token", {}, cookie=cookie)
 assert status == 201 and len(payload["token"]) > 30
-print("EXCHANGE_SNAP_PROBE=admin_login_status_and_enrollment_token_passed")
+if args.enroll:
+    assert args.expected_nodes == 0
+    enrollment = {"nodeName": "snap-probe-node", "clusterId": "example-cluster",
+                  "enrollToken": payload["token"], "publicKey": "snap-probe-public-key"}
+    status, joined, _ = request("/api/hm/enroll", enrollment)
+    assert status == 201 and joined["node_id"] and len(joined["secret"]) > 30
+    try:
+        request("/api/hm/enroll", enrollment)
+    except urllib.error.HTTPError as error:
+        assert error.code == 403
+    else:
+        raise AssertionError("Enrollment token was accepted twice")
+    status, after_join, _ = request("/api/admin/status", cookie=cookie)
+    assert status == 200 and after_join["enrolledNodes"] == 1
+print("EXCHANGE_SNAP_PROBE=admin_login_status_enrollment_and_persistence_passed")
