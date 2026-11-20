@@ -20,6 +20,7 @@ jobs:
         run: |
           cd exchange
           npm ci
+          npm run build
           npm run test:network-admin
           npm run test:discovery
           npm run test:protocol
