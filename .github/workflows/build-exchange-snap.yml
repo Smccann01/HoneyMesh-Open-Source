@@ -43,6 +43,8 @@ jobs:
             --tenant=example --cluster=example-cluster
           sudo test -s /var/snap/network-decode-exchange/common/private/admin-credentials.txt
           sudo test -s /var/snap/network-decode-exchange/common/private/exchange.db
+          test "$(sudo stat -c %a /var/snap/network-decode-exchange/common/private)" = 700
+          test "$(sudo stat -c %a /var/snap/network-decode-exchange/common/private/admin-credentials.txt)" = 600
           if sudo snap run network-decode-exchange.init \
             --origin=https://exchange.example.test --email=admin@example.test \
             --tenant=example --cluster=example-cluster; then
@@ -56,6 +58,11 @@ jobs:
             sleep 1
           done
           test "$code" = 401
+          sudo ss -ltn | grep -q '127.0.0.1:8790'
+          if sudo ss -ltn | grep -Eq '0.0.0.0:8790|\[::\]:8790|:::8790'; then
+            echo 'Exchange unexpectedly listens on a public interface' >&2
+            exit 1
+          fi
           sudo python3 .github/scripts/exchange-snap-auth-probe.py
           sudo snap run network-decode-exchange.backup
           sudo find /var/snap/network-decode-exchange/common/private/backups \
@@ -68,6 +75,14 @@ jobs:
             -maxdepth 1 -type f -name '*.db' -exec cp -f '{}' \
             /var/snap/network-decode-exchange/common/private/exchange.db ';'
           sudo snap start --enable network-decode-exchange
+          for attempt in $(seq 1 30); do
+            code=$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8790/api/admin/session || true)
+            if [ "$code" = 401 ]; then break; fi
+            sleep 1
+          done
+          test "$code" = 401
+          sudo python3 .github/scripts/exchange-snap-auth-probe.py
+          sudo snap restart network-decode-exchange
           for attempt in $(seq 1 30); do
             code=$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8790/api/admin/session || true)
             if [ "$code" = 401 ]; then break; fi

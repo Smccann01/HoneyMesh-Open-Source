@@ -31,5 +31,6 @@ sudo snap services network-decode-exchange
 ```
 
 The backup command writes an integrity-checked copy under the Snap's private
-`backups/` directory by default. Restore testing, real version refresh,
-enrollment, and proxy setup remain release gates in [issue #32](https://github.com/Smccann01/HoneyMesh-Open-Source/issues/32).
+`backups/` directory by default. The installed-package CI tests restoring
+one backup and logging in again. Real version refresh, two-host enrollment,
+and HTTPS proxy setup remain release gates in [issue #32](https://github.com/Smccann01/HoneyMesh-Open-Source/issues/32).
