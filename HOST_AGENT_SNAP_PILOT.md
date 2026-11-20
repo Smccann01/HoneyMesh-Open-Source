@@ -52,6 +52,15 @@ snapshot restore recovered the same private configuration, key and admin token;
 the service remained disabled and XDP detached. This does not test coexistence
 with a separately installed `.deb` agent.
 
+In a disposable Ubuntu 24.04 VM, the released RC6 `.deb` service occupied
+`127.0.0.1:9000` and `127.0.0.1:8443`. An explicit start of the earlier Core
+Snap candidate then failed on the mesh port and systemd retried it. XDP did
+detach after the failed process exited. The updated Core Snap checks the mesh
+port before starting the agent and refuses to attach XDP when another service
+owns it. Operators must stop and disable `honeymesh.service` before enabling
+the Snap; do not leave both services enabled for reboot. This port check is a
+startup guard, not proof that two agents can share one protected interface.
+
 The [opt-in service CI run](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44629269694)
 passed for both agents. The separate
 [developer-package build](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44629269782)

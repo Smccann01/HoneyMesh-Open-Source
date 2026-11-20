@@ -96,6 +96,32 @@ jobs:
             exit 1
           fi
           echo 'STRICT_PROBE=detached'
+      - name: Probe Core version and existing-agent port refusal
+        if: matrix.snap_name == 'network-decode-core'
+        env:
+          SNAP_NAME: ${{ matrix.snap_name }}
+        run: |
+          set -eu
+          test "$(sudo snap run "$SNAP_NAME" -version)" = 'v2.3.6-rc6-corefirewall4+s1'
+          python3 -m http.server 9000 --bind 127.0.0.1 > port-listener.log 2>&1 &
+          listener_pid=$!
+          trap 'kill "$listener_pid" 2>/dev/null || true' EXIT
+          sleep 1
+          curl --fail --silent http://127.0.0.1:9000/ > /dev/null
+          set +e
+          sudo timeout --signal=TERM --kill-after=2s 8s snap run "$SNAP_NAME" > port-conflict.log 2>&1
+          status=$?
+          set -e
+          if [ "$status" -eq 0 ] || [ "$status" -ge 124 ]; then
+            echo "PORT_CONFLICT_PROBE=unexpected_status_$status" >&2
+            exit 1
+          fi
+          grep -Fq 'Another service owns the HoneyMesh mesh port 127.0.0.1:9000' port-conflict.log
+          if sudo ip -details link show hm-strict-test | grep -q 'prog/xdp'; then
+            echo 'PORT_CONFLICT_PROBE=xdp_attached' >&2
+            exit 1
+          fi
+          echo 'PORT_CONFLICT_PROBE=refused_before_xdp'
       - name: Probe crash, restart and private state
         env:
           SNAP_NAME: ${{ matrix.snap_name }}

@@ -1,7 +1,7 @@
 name: network-decode-core
 title: HoneyMesh Core Kernel Pilot
 base: core24
-version: '2.3.6-rc6-corefirewall4'
+version: '2.3.6-rc6-corefirewall4+s1'
 summary: Developer pilot for HoneyMesh Core host protection
 description: |
   Developer-only Core Snap candidate. It needs host eBPF/XDP access and is
@@ -45,11 +45,11 @@ parts:
       cd "$CRAFT_PART_SRC"
       go mod download
       install -d "$CRAFT_PART_INSTALL/bin"
-      go build -trimpath -buildvcs=false -ldflags=-buildid= -o "$CRAFT_PART_INSTALL/bin/honeymesh" ./
+      go build -trimpath -buildvcs=false -ldflags="-buildid= -X main.Version=v${SNAPCRAFT_PROJECT_VERSION}" -o "$CRAFT_PART_INSTALL/bin/honeymesh" ./
   runtime:
     plugin: nil
     source: .
-    stage-packages: [openssl, ca-certificates]
+    stage-packages: [openssl, ca-certificates, netcat-openbsd]
     override-build: |
       install -Dm0755 "$CRAFT_PART_SRC/snap/launcher/init-agent" "$CRAFT_PART_INSTALL/bin/init-agent"
       install -Dm0755 "$CRAFT_PART_SRC/snap/launcher/run-agent" "$CRAFT_PART_INSTALL/bin/run-agent"

@@ -9,6 +9,14 @@ if [ ! -f "$state/honeymesh.json" ] || [ ! -f "$state/certs/node/node.key" ]; th
   echo 'Run sudo snap run network-decode-core.init first' >&2
   exit 1
 fi
+if [ ! -x "$SNAP/bin/nc.openbsd" ]; then
+  echo 'The Core Snap is missing its local port check; refusing to start' >&2
+  exit 1
+fi
+if "$SNAP/bin/nc.openbsd" -z -w 1 127.0.0.1 9000; then
+  echo 'Another service owns the HoneyMesh mesh port 127.0.0.1:9000. Stop and disable the existing honeymesh.service before starting this Snap.' >&2
+  exit 1
+fi
 if ! head -c 1 /sys/kernel/btf/vmlinux >/dev/null 2>&1; then
   echo 'Kernel BTF is required but /sys/kernel/btf/vmlinux is unreadable. Check that this kernel provides BTF and that the network-decode-core:kernel-btf plug is connected.' >&2
   exit 1
