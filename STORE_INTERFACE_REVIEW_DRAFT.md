@@ -43,8 +43,8 @@ input, rather than an untested convenience permission.
 An initial attempt to narrow `system-files` to `/sys/kernel/btf/vmlinux`
 failed because the default eBPF library loader fell back to opening the BTF
 directory. The Snap-only loader now passes an explicitly loaded `vmlinux`
-BTF specification to the eBPF library. The exact-file strict test must pass
-before this becomes the Store request.
+BTF specification to the eBPF library. Both agents then passed the full
+[strict diagnostic with exact-file access](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44650128665).
 
 The current [system-files interface documentation](https://snapcraft.io/docs/reference/interfaces/system-files-interface/)
 says Store acceptance excludes non-owned `/sys` paths. The kernel BTF files
@@ -71,6 +71,7 @@ are **not** asking for an exception through `system-files` without guidance.
 - [Second-process conflict and snapshot restore test](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44630382291)
 - [BTF permission diagnostic](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44631434415)
 - [Failed single-file BTF scope diagnostic](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44649310355)
+- [Passing single-file BTF strict diagnostic](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44650128665)
 - [Release gate issue](https://github.com/Smccann01/HoneyMesh-Open-Source/issues/31)
 
 We will keep the Snaps in developer testing until the Store permission route,
