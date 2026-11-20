@@ -6,6 +6,7 @@ on:
     paths:
       - 'exchange/**'
       - '.github/workflows/build-exchange-snap.yml'
+      - '.github/scripts/exchange-snap-auth-probe.py'
 
 permissions:
   contents: read
@@ -55,10 +56,26 @@ jobs:
             sleep 1
           done
           test "$code" = 401
+          sudo python3 .github/scripts/exchange-snap-auth-probe.py
           sudo snap run network-decode-exchange.backup
-          sudo test -s /var/snap/network-decode-exchange/common/private/backups/*.db
+          sudo find /var/snap/network-decode-exchange/common/private/backups \
+            -maxdepth 1 -type f -name '*.db' -size +0c | grep -q .
           sudo snap stop --disable network-decode-exchange
           snap services network-decode-exchange | grep -q 'disabled.*inactive'
+          sudo rm -f /var/snap/network-decode-exchange/common/private/exchange.db-wal \
+            /var/snap/network-decode-exchange/common/private/exchange.db-shm
+          sudo find /var/snap/network-decode-exchange/common/private/backups \
+            -maxdepth 1 -type f -name '*.db' -exec cp -f '{}' \
+            /var/snap/network-decode-exchange/common/private/exchange.db ';'
+          sudo snap start --enable network-decode-exchange
+          for attempt in $(seq 1 30); do
+            code=$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8790/api/admin/session || true)
+            if [ "$code" = 401 ]; then break; fi
+            sleep 1
+          done
+          test "$code" = 401
+          sudo python3 .github/scripts/exchange-snap-auth-probe.py
+          sudo snap stop --disable network-decode-exchange
           sudo snap remove --purge network-decode-exchange
       - name: Record checksum
         env:
