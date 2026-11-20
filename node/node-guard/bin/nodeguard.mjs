@@ -2,7 +2,7 @@
 import { readFile, stat, writeFile } from "node:fs/promises";
 import { simulatePolicyV1, validatePolicyV1 } from "../policy.mjs";
 
-const usage = "Usage: nodeguard init [--output <policy.json>] | nodeguard doctor [policy.json] | nodeguard policy validate <policy.json> | nodeguard policy test <policy.json> <observations.json> --at <UTC timestamp>";
+const usage = "Usage: nodeguard init [--output <policy.json>] | nodeguard doctor [policy.json] | nodeguard policy validate <policy.json> | nodeguard policy test <policy.json> <observations.json> --at <UTC timestamp>\nManual: https://network-decode.com/docs/node-guard-snap";
 const examplePolicy = new URL("../examples/auth-policy.json", import.meta.url);
 
 async function readJson(path) {
@@ -12,6 +12,10 @@ async function readJson(path) {
 }
 
 async function main(args) {
+  if (args.length === 1 && (args[0] === "--help" || args[0] === "-h")) {
+    process.stdout.write(`${usage}\n`);
+    return;
+  }
   if (args[0] === "init" && (args.length === 1 || (args.length === 3 && args[1] === "--output"))) {
     const output = args.length === 3 ? args[2] : "nodeguard.policy.json";
     if (!output || output.startsWith("-")) throw new Error("choose a policy output path");

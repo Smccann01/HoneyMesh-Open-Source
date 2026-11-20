@@ -6,6 +6,10 @@ application, run a network daemon, or protect traffic on its own. The Snap is
 limited to AMD64 while its first installed build is qualified.
 
 Install the beta with `sudo snap install network-decode-nodeguard --beta`.
+The current step-by-step manual is at
+<https://network-decode.com/docs/node-guard-snap>. It links back to the
+[Snap Store listing](https://snapcraft.io/network-decode-nodeguard) and the
+separate SDK integration guide.
 Run `network-decode-nodeguard init` from a directory in your home folder to
 create an OBSERVE policy, then use `network-decode-nodeguard doctor
 nodeguard.policy.json` and `network-decode-nodeguard policy validate
