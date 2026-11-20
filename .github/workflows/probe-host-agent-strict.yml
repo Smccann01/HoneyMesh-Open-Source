@@ -259,12 +259,15 @@ jobs:
             exit 1
           fi
           if [ "$attached" -eq 1 ]; then
-            echo 'BTF_PROBE=attached_without_kernel_btf_plug'
-          else
-            echo 'BTF_PROBE=failed_without_kernel_btf_plug'
-            grep -Ei 'btf|permission|denied|bpf|attach' no-btf-probe.log | tail -20 || true
-            sudo journalctl -k --no-pager -n 100 | grep "snap.$SNAP_NAME" | grep 'DENIED' | tail -10 || true
+            echo 'BTF_PROBE=attached_without_kernel_btf_plug' >&2
+            exit 1
           fi
+          if ! grep -Fq 'Kernel BTF is required but /sys/kernel/btf/vmlinux is unreadable' no-btf-probe.log; then
+            echo 'BTF_PROBE=missing_preflight_message' >&2
+            cat no-btf-probe.log >&2
+            exit 1
+          fi
+          echo 'BTF_PROBE=preflight_refused_missing_kernel_btf_access'
       - name: Probe snapshot restore after normal removal
         env:
           SNAP_FILE: ${{ steps.build.outputs.snap }}

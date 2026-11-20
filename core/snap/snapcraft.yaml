@@ -8,7 +8,10 @@ description: |
   not qualified for the Snap Store or production. Installation starts no
   service. Setup creates per-host credentials, then an operator may run it
   manually on a disposable Ubuntu host with an explicitly selected test
-  interface. The default config selects no interface and no sharing.
+  interface. The default config selects no interface and no sharing. The
+  running agent requires readable host kernel BTF at /sys/kernel/btf/vmlinux;
+  the kernel-btf plug and other host-control interfaces require manual
+  connection in the strict diagnostic. Store approval is not yet granted.
 license: Apache-2.0 AND (BSD-2-Clause OR GPL-2.0-only)
 icon: snap/gui/icon.png
 source-code: https://github.com/Smccann01/HoneyMesh-Open-Source/tree/main/core

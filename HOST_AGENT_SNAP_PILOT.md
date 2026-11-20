@@ -28,6 +28,13 @@ the CO-RE XDP program and reported that no kernel BTF was found; neither
 attached XDP. Reconnecting the plug restored the tested path. The current
 strict recipe cannot simply omit that permission.
 
+**Required host capability:** the running kernel must expose readable BTF at
+`/sys/kernel/btf/vmlinux`, and a confined Snap must be granted access to it.
+Both launchers now check actual readability before starting the agent and
+report a specific error if BTF is absent or inaccessible. Setup and package
+installation do not start protection. A missing BTF requirement must not be
+silently treated as a working host agent.
+
 The [lifecycle CI run](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44627883020)
 passed on disposable Ubuntu 24.04 runners for both agents. The strict diagnostic
 verified XDP detach after a forced process exit, restart in TEST with the same
@@ -70,6 +77,15 @@ sudo snap stop --disable network-decode-core
 Substitute `network-decode-node` for the Node agent. The service will start on
 boot only after `snap start --enable`; use `snap stop --disable` for recovery.
 Never select a critical interface for an unqualified test.
+
+Before any strict diagnostic, check the host BTF file with
+`test -r /sys/kernel/btf/vmlinux` and manually connect the candidate's
+`kernel-btf` plug with `sudo snap connect <snap-name>:kernel-btf`. Check
+`snap connections <snap-name>` for that and the other required plugs listed
+below. These commands describe a local diagnostic; they do not grant a Store
+declaration or make a public install possible. If the service reports that
+kernel BTF is unreadable, stop and disable it, confirm the running kernel
+provides BTF, and verify the permission connection. Do not bypass the check.
 
 Qualification before a Store beta:
 

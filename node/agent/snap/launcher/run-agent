@@ -9,4 +9,8 @@ if [ ! -f "$state/honeymesh.json" ] || [ ! -f "$state/certs/node/node.key" ]; th
   echo 'Run sudo snap run network-decode-node.init first' >&2
   exit 1
 fi
+if ! head -c 1 /sys/kernel/btf/vmlinux >/dev/null 2>&1; then
+  echo 'Kernel BTF is required but /sys/kernel/btf/vmlinux is unreadable. Check that this kernel provides BTF and that the network-decode-node:kernel-btf plug is connected.' >&2
+  exit 1
+fi
 exec "$SNAP/bin/honeymesh" -config "$state/honeymesh.json" -state-dir "$state" "$@"
