@@ -21,7 +21,7 @@ data. The agents use no hosted account for local operation.
 
 Our isolated Ubuntu 24.04 strict-confinement test manually connected
 `network-control`, `mount-observe`, `system-trace`, `firewall-control`, and a
-read-only `kernel-btf` plug (`system-files: read: [/sys/kernel/btf]`). Both
+read-only `kernel-btf` plug (`system-files: read: [/sys/kernel/btf/vmlinux]`). Both
 agents attached XDP to a disposable veth interface, refused a ban in TEST,
 blocked one synthetic source in ENFORCE, incremented XDP drop counters,
 released the source, returned to TEST, and detached on exit. A separate

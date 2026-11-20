@@ -6,6 +6,8 @@ on:
     paths:
       - '.github/workflows/probe-host-agent-strict.yml'
       - '.github/scripts/host-agent-traffic-probe.py'
+      - 'core/snap/**'
+      - 'node/agent/snap/**'
 
 permissions:
   contents: read
