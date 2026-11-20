@@ -10,7 +10,7 @@ production safety or Store readiness.
 The separate strict-confinement diagnostic [run 44621989489](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44621989489)
 passed for both agents with `network-control`, `mount-observe`,
 `system-trace`, `firewall-control`, and a read-only `system-files` plug for
-`/sys/kernel/btf` connected manually. On a veth pair split across network
+`/sys/kernel/btf/vmlinux` connected manually. On a veth pair split across network
 namespaces, it verified baseline traffic, TEST refusal of a manual ban,
 ENFORCE blocking of an exact source, increased XDP drop counters, recovery
 after release, return to TEST, and detach on exit. This is a local diagnostic,
@@ -92,7 +92,7 @@ Qualification before a Store beta:
 1. Complete a real application-version refresh and test coexistence with an
    installed `.deb` agent on a disposable host. Record kernel and snapd logs
    for failures and recovery.
-2. Resolve the `/sys/kernel/btf` Store blocker with Canonical or remove the
+2. Resolve the `/sys/kernel/btf/vmlinux` Store blocker with Canonical or remove the
    runtime dependency, then obtain approval for the resulting strict interface
    set. Devmode is diagnostic and is not a release confinement model. If strict
    approval is unavailable, review a classic confinement request with Canonical.
@@ -118,7 +118,7 @@ The diagnostic's non-auto-connected plugs are `network-control` for XDP link
 operations, `system-trace` for BPF operations, `mount-observe` for reading
 `/proc/self/mountinfo` during BPF initialization, `firewall-control` for
 host enforcement, and `kernel-btf` (`system-files`) with read-only access to
-`/sys/kernel/btf` for CO-RE relocations. The agent does not need to write to
+`/sys/kernel/btf/vmlinux` for CO-RE relocations. The agent does not need to write to
 the BTF directory, but current `system-files` Store policy excludes non-owned
 `/sys` paths. Ask the Store and snapd teams whether a purpose-specific BTF
 interface exists or can be added, or whether a different BTF loading design is

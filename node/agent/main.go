@@ -17,6 +17,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/cilium/ebpf"
+	"github.com/cilium/ebpf/btf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/rlimit"
 
@@ -202,7 +204,15 @@ func main() {
 	// ─────────────────────────────────────────────
 	// 6. KERNEL + DATABASE
 	// ─────────────────────────────────────────────
-	if err := loadBpfObjects(&bpfObjs, nil); err != nil {
+	var bpfOpts *ebpf.CollectionOptions
+	if os.Getenv("SNAP") != "" {
+		kernelTypes, err := btf.LoadSpec("/sys/kernel/btf/vmlinux")
+		if err != nil {
+			log.Fatalf("[HoneyMesh] Failed to read kernel BTF: %v", err)
+		}
+		bpfOpts = &ebpf.CollectionOptions{Programs: ebpf.ProgramOptions{KernelTypes: kernelTypes}}
+	}
+	if err := loadBpfObjects(&bpfObjs, bpfOpts); err != nil {
 		log.Fatalf("[HoneyMesh] Failed to load eBPF objects: %v", err)
 	}
 	defer bpfObjs.Close()

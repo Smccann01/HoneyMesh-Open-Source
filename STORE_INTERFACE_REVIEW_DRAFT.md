@@ -21,7 +21,7 @@ data. The agents use no hosted account for local operation.
 
 Our isolated Ubuntu 24.04 strict-confinement test manually connected
 `network-control`, `mount-observe`, `system-trace`, `firewall-control`, and a
-read-only `kernel-btf` plug (`system-files: read: [/sys/kernel/btf]`). Both
+read-only `kernel-btf` plug (`system-files: read: [/sys/kernel/btf/vmlinux]`). Both
 agents attached XDP to a disposable veth interface, refused a ban in TEST,
 blocked one synthetic source in ENFORCE, incremented XDP drop counters,
 released the source, returned to TEST, and detached on exit. A separate
@@ -39,6 +39,12 @@ the successful strict traffic and lifecycle probes. Both agents then failed
 CO-RE relocation with `no BTF found for kernel version` on the Ubuntu runner;
 neither attached XDP. This narrows the Store question to a required runtime
 input, rather than an untested convenience permission.
+
+An initial attempt to narrow `system-files` to `/sys/kernel/btf/vmlinux`
+failed because the default eBPF library loader fell back to opening the BTF
+directory. The Snap-only loader now passes an explicitly loaded `vmlinux`
+BTF specification to the eBPF library. The exact-file strict test must pass
+before this becomes the Store request.
 
 The current [system-files interface documentation](https://snapcraft.io/docs/reference/interfaces/system-files-interface/)
 says Store acceptance excludes non-owned `/sys` paths. The kernel BTF files
@@ -64,6 +70,7 @@ are **not** asking for an exception through `system-files` without guidance.
 - [Crash, restart, local revision revert, and purge test](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44627883020)
 - [Second-process conflict and snapshot restore test](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44630382291)
 - [BTF permission diagnostic](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44631434415)
+- [Failed single-file BTF scope diagnostic](https://github.com/Smccann01/HoneyMesh-Open-Source/actions/runs/44649310355)
 - [Release gate issue](https://github.com/Smccann01/HoneyMesh-Open-Source/issues/31)
 
 We will keep the Snaps in developer testing until the Store permission route,
