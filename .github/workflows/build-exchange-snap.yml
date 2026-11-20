@@ -1,0 +1,72 @@
+name: Build self-hosted Exchange Snap pilot
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'exchange/**'
+      - '.github/workflows/build-exchange-snap.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  snap:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test Exchange source
+        run: |
+          cd exchange
+          npm ci
+          npm run test:network-admin
+          npm run test:discovery
+          npm run test:protocol
+      - name: Build strict Snap candidate
+        id: build
+        uses: snapcore/action-build@v1
+        with:
+          path: exchange
+      - name: Install, initialize, start, back up, and remove
+        env:
+          SNAP_FILE: ${{ steps.build.outputs.snap }}
+        run: |
+          set -eu
+          sudo snap install --dangerous "$SNAP_FILE"
+          snap services network-decode-exchange | grep -q 'disabled.*inactive'
+          test ! -e /var/snap/network-decode-exchange/common/private/admin-credentials.txt
+          sudo snap run network-decode-exchange.init \
+            --origin=https://exchange.example.test --email=admin@example.test \
+            --tenant=example --cluster=example-cluster
+          sudo test -s /var/snap/network-decode-exchange/common/private/admin-credentials.txt
+          sudo test -s /var/snap/network-decode-exchange/common/private/exchange.db
+          if sudo snap run network-decode-exchange.init \
+            --origin=https://exchange.example.test --email=admin@example.test \
+            --tenant=example --cluster=example-cluster; then
+            echo 'Second initialization unexpectedly succeeded' >&2
+            exit 1
+          fi
+          sudo snap start --enable network-decode-exchange
+          for attempt in $(seq 1 40); do
+            code=$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8790/api/admin/session || true)
+            if [ "$code" = 401 ]; then break; fi
+            sleep 1
+          done
+          test "$code" = 401
+          sudo snap run network-decode-exchange.backup
+          sudo test -s /var/snap/network-decode-exchange/common/private/backups/*.db
+          sudo snap stop --disable network-decode-exchange
+          snap services network-decode-exchange | grep -q 'disabled.*inactive'
+          sudo snap remove --purge network-decode-exchange
+      - name: Record checksum
+        env:
+          SNAP_FILE: ${{ steps.build.outputs.snap }}
+        run: sha256sum "$SNAP_FILE" > SNAP-SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: network-decode-exchange-snap-pilot
+          path: |
+            ${{ steps.build.outputs.snap }}
+            SNAP-SHA256SUMS
+          retention-days: 7

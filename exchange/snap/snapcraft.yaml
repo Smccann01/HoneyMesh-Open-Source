@@ -1,0 +1,54 @@
+name: network-decode-exchange
+title: HoneyMesh Exchange Pilot
+base: core24
+version: '0.1.0-pilot.1'
+summary: Self-hosted HoneyMesh intelligence Exchange developer pilot
+description: |
+  Developer pilot for a self-hosted HoneyMesh Exchange. Installation starts no
+  service. An operator must initialize a private SQLite database and local
+  administrator credentials, then explicitly enable the loopback-only service.
+  Sharing and discovery start disabled. This candidate is not qualified for
+  general production use.
+license: AGPL-3.0-only
+source-code: https://github.com/Smccann01/HoneyMesh-Open-Source/tree/main/exchange
+issues: https://github.com/Smccann01/HoneyMesh-Open-Source/issues/32
+grade: devel
+confinement: strict
+platforms:
+  amd64:
+
+apps:
+  network-decode-exchange:
+    command: bin/run-exchange
+    daemon: simple
+    install-mode: disable
+    plugs: [network, network-bind]
+  init:
+    command: bin/init-exchange
+  backup:
+    command: bin/backup-exchange
+
+parts:
+  exchange:
+    plugin: npm
+    source: .
+    npm-include-node: true
+    npm-node-version: 22.16.0
+    prime: [bin/node, opt/exchange]
+    override-build: |
+      craftctl default
+      cd "$CRAFT_PART_SRC"
+      npm run build
+      install -d "$CRAFT_PART_INSTALL/opt/exchange/.next" "$CRAFT_PART_INSTALL/opt/exchange/scripts"
+      cp -a .next/standalone/. "$CRAFT_PART_INSTALL/opt/exchange/"
+      cp -a .next/static "$CRAFT_PART_INSTALL/opt/exchange/.next/"
+      cp -a public "$CRAFT_PART_INSTALL/opt/exchange/"
+      cp scripts/init-private-exchange.mjs scripts/provision-network-admin.mjs scripts/backup-exchange.mjs "$CRAFT_PART_INSTALL/opt/exchange/scripts/"
+      install -Dm0644 LICENSE "$CRAFT_PART_INSTALL/opt/exchange/LICENSE"
+  launcher:
+    plugin: dump
+    source: snap/launcher
+    organize:
+      init-exchange: bin/init-exchange
+      run-exchange: bin/run-exchange
+      backup-exchange: bin/backup-exchange

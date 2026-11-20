@@ -1,0 +1,31 @@
+#!/bin/sh
+set -eu
+if [ "$(id -u)" -ne 0 ]; then
+  echo 'Run setup as root with sudo snap run network-decode-exchange.init' >&2
+  exit 1
+fi
+origin= email= tenant= cluster=
+for arg in "$@"; do
+  case "$arg" in
+    --origin=*) origin=${arg#--origin=} ;;
+    --email=*) email=${arg#--email=} ;;
+    --tenant=*) tenant=${arg#--tenant=} ;;
+    --cluster=*) cluster=${arg#--cluster=} ;;
+    *) echo "Unknown setup argument: $arg" >&2; exit 1 ;;
+  esac
+done
+if [ -z "$origin" ] || [ -z "$email" ] || [ -z "$tenant" ] || [ -z "$cluster" ]; then
+  echo 'Required: --origin=https://exchange.example.com --email=admin@example.com --tenant=tenant-id --cluster=cluster-id' >&2
+  exit 1
+fi
+state=${SNAP_COMMON:?SNAP_COMMON is required}/private
+umask 077
+install -d -m 0700 "$state"
+if [ -e "$state/exchange.env" ] || [ -e "$state/admin-credentials.txt" ]; then
+  echo 'Exchange is already initialized or setup was interrupted; refusing to rotate credentials' >&2
+  exit 1
+fi
+db="$state/exchange.db"
+"$SNAP/bin/node" "$SNAP/opt/exchange/scripts/init-private-exchange.mjs" "--origin=$origin" "--output=$state/exchange.env" "--db=$db"
+"$SNAP/bin/node" "$SNAP/opt/exchange/scripts/provision-network-admin.mjs" "--origin=$origin" "--db=$db" "--credentials-out=$state/admin-credentials.txt" "--email=$email" "--tenant=$tenant" "--cluster=$cluster"
+echo 'Setup complete. Read the credentials file privately, configure HTTPS proxying, then explicitly enable the service.'
