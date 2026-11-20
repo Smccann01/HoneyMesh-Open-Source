@@ -310,6 +310,18 @@ jobs:
             exit 1
           fi
           echo 'PURGE_PROBE=state_removed_and_xdp_detached'
+      - name: Record strict diagnostic package checksum
+        env:
+          SNAP_FILE: ${{ steps.build.outputs.snap }}
+        run: sha256sum "$SNAP_FILE" > STRICT-SNAP-SHA256SUMS
+      - name: Preserve tested strict diagnostic package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.snap_name }}-strict-diagnostic
+          path: |
+            ${{ steps.build.outputs.snap }}
+            STRICT-SNAP-SHA256SUMS
+          retention-days: 3
       - name: Remove diagnostic Snap and interface
         if: always()
         env:
