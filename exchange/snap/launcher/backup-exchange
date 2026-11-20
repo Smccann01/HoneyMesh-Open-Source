@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+if [ "$(id -u)" -ne 0 ]; then
+  echo 'Run backup as root with sudo snap run network-decode-exchange.backup' >&2
+  exit 1
+fi
+state=${SNAP_COMMON:?SNAP_COMMON is required}/private
+if [ ! -s "$state/exchange.env" ]; then
+  echo 'Initialize Exchange before backup' >&2
+  exit 1
+fi
+umask 077
+export DATABASE_URL="file:$state/exchange.db"
+destination=${1:-$state/backups/exchange-$(date -u +%Y%m%dT%H%M%SZ).db}
+exec "$SNAP/bin/node" "$SNAP/opt/exchange/scripts/backup-exchange.mjs" "$destination"

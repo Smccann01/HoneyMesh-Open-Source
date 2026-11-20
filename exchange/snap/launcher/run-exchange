@@ -1,0 +1,24 @@
+#!/bin/sh
+set -eu
+if [ "$(id -u)" -ne 0 ]; then
+  echo 'The Exchange service requires root-owned private Snap data' >&2
+  exit 1
+fi
+state=${SNAP_COMMON:?SNAP_COMMON is required}/private
+if [ ! -s "$state/exchange.env" ] || [ ! -s "$state/admin-credentials.txt" ]; then
+  echo 'Run sudo snap run network-decode-exchange.init first' >&2
+  exit 1
+fi
+runtime=${SNAP_DATA:?SNAP_DATA is required}/runtime
+if [ ! -f "$runtime/.snap-revision" ] || [ "$(cat "$runtime/.snap-revision")" != "${SNAP_REVISION:?SNAP_REVISION is required}" ]; then
+  rm -rf "$runtime"
+  install -d -m 0700 "$runtime"
+  cp -a "$SNAP/opt/exchange/." "$runtime/"
+  printf '%s\n' "$SNAP_REVISION" > "$runtime/.snap-revision"
+fi
+set -a
+. "$state/exchange.env"
+set +a
+export NODE_ENV=production HOSTNAME=127.0.0.1 PORT=8790
+cd "$runtime"
+exec "$SNAP/bin/node" server.js
