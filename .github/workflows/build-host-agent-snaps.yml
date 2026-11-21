@@ -24,10 +24,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Build developer candidate
         id: build
-        uses: snapcore/action-build@v1
+        uses: snapcore/action-build@3bdaa03e1ba6bf59a65f84a751d943d549a54e79 # v1
         with:
           path: ${{ matrix.component }}
       - name: Install and check private first-run state
@@ -106,7 +106,7 @@ jobs:
         env:
           SNAP_FILE: ${{ steps.build.outputs.snap }}
         run: sha256sum "$SNAP_FILE" > SNAP-SHA256SUMS
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ matrix.snap_name }}-developer-candidate
           path: |
