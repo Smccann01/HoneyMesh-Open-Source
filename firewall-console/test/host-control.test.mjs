@@ -4,6 +4,7 @@ import { createFirewallLab } from '../src/firewall.mjs';
 import { createFirewallServer } from '../src/server.mjs';
 import { AgentError, createAgentControl } from '../src/agent-control.mjs';
 import { createServer as createHttpsServer } from 'node:https';
+import { createServer as createTcpServer } from 'node:net';
 import { X509Certificate } from 'node:crypto';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -105,6 +106,22 @@ test('TLS pin is verified before the operator token reaches a local HTTPS servic
     const right = createAgentControl({ url, fingerprint_sha256, ca_certificate: cert.toString('utf8') });
     assert.equal(await right.authenticate('x'.repeat(64)), true);
     assert.deepEqual(seen, ['x'.repeat(64)]);
+
+    const sockets = new Set();
+    const stalled = createTcpServer((socket) => { sockets.add(socket); socket.on('close', () => sockets.delete(socket)); });
+    await new Promise((resolve) => stalled.listen(0, '127.0.0.1', resolve));
+    const watchdog = setTimeout(() => { for (const socket of sockets) socket.destroy(); }, 6_500);
+    try {
+      const stalledControl = createAgentControl({ url: `https://127.0.0.1:${stalled.address().port}`,
+        fingerprint_sha256, ca_certificate: cert.toString('utf8') });
+      const start = Date.now();
+      await assert.rejects(stalledControl.authenticate('x'.repeat(64)), { message: 'agent_timeout' });
+      assert.ok(Date.now() - start < 6_200, 'TLS handshake must have a deadline');
+    } finally {
+      clearTimeout(watchdog);
+      for (const socket of sockets) socket.destroy();
+      await new Promise((resolve) => stalled.close(resolve));
+    }
   } finally {
     await new Promise((resolve) => server.close(resolve));
     await rm(dir, { recursive: true });

@@ -31,7 +31,9 @@ function readPinnedJson(url, fingerprint, ca, path) {
     catch { callback(new Error('agent_unavailable')); return; }
     let settled = false;
     const done = (error, connection) => { if (settled) return; settled = true; callback(error, connection); };
+    socket.setTimeout(3_000, () => { socket.destroy(); done(new Error('agent_timeout')); });
     socket.once('secureConnect', () => {
+      socket.setTimeout(0);
       const actual = socket.getPeerCertificate().fingerprint256;
       if (!socket.authorized || !actual || actual.length !== fingerprint.length || !timingSafeEqual(Buffer.from(actual), Buffer.from(fingerprint))) {
         socket.destroy(); done(new Error('agent_tls_pin_mismatch')); return;

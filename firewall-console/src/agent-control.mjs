@@ -30,7 +30,9 @@ async function pinnedRequest(config, path, token, method = 'GET', body = undefin
     catch { callback(new AgentError(502, 'agent_unavailable')); return; }
     let settled = false;
     const done = (error, connection) => { if (settled) return; settled = true; callback(error, connection); };
+    socket.setTimeout(5_000, () => { socket.destroy(); done(new AgentError(504, 'agent_timeout')); });
     socket.once('secureConnect', () => {
+      socket.setTimeout(0);
       const actual = socket.getPeerCertificate().fingerprint256;
       const expected = config.fingerprint;
       if (!socket.authorized || !actual || actual.length !== expected.length || !timingSafeEqual(Buffer.from(actual), Buffer.from(expected))) {

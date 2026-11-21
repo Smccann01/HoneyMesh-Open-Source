@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createAgentOverview } from '../src/agent-overview.mjs';
 import { createServer as createHttpsServer } from 'node:https';
+import { createServer as createTcpServer } from 'node:net';
 import { X509Certificate } from 'node:crypto';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -55,6 +56,22 @@ test('agent overview sends no HTTP request until the local TLS pin matches', asy
     const right = createAgentOverview({ url, fingerprint_sha256, ca_certificate: cert.toString('utf8') });
     assert.equal((await right()).connected, true);
     assert.deepEqual(seen.sort(), ['/api/health', '/api/mode']);
+
+    const sockets = new Set();
+    const stalled = createTcpServer((socket) => { sockets.add(socket); socket.on('close', () => sockets.delete(socket)); });
+    await new Promise((resolve) => stalled.listen(0, '127.0.0.1', resolve));
+    const watchdog = setTimeout(() => { for (const socket of sockets) socket.destroy(); }, 4_500);
+    try {
+      const stalledOverview = createAgentOverview({ url: `https://127.0.0.1:${stalled.address().port}`,
+        fingerprint_sha256, ca_certificate: cert.toString('utf8') });
+      const start = Date.now();
+      assert.deepEqual(await stalledOverview(), { connected: false, reason: 'agent_unavailable' });
+      assert.ok(Date.now() - start < 4_200, 'TLS handshake must finish or time out before HTTP starts');
+    } finally {
+      clearTimeout(watchdog);
+      for (const socket of sockets) socket.destroy();
+      await new Promise((resolve) => stalled.close(resolve));
+    }
   } finally {
     await new Promise((resolve) => server.close(resolve));
     await rm(dir, { recursive: true });
