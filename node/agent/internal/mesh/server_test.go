@@ -3,6 +3,7 @@ package mesh
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -11,6 +12,39 @@ import (
 	"testing"
 	"time"
 )
+
+func TestMeshPeerURLRequiresIPLiteral(t *testing.T) {
+	valid := map[string]string{
+		"10.0.0.2":       "https://10.0.0.2:9000/mesh/join",
+		"10.0.0.2:9443":  "https://10.0.0.2:9443/mesh/join",
+		"[fd00::2]:9000": "https://[fd00::2]:9000/mesh/join",
+	}
+	for peer, want := range valid {
+		got, err := meshPeerURL(peer, "/mesh/join")
+		if err != nil || got != want {
+			t.Errorf("meshPeerURL(%q) = %q, %v; want %q", peer, got, err, want)
+		}
+	}
+	for _, peer := range []string{"", "localhost:9000", "https://10.0.0.2:9000", "10.0.0.2@evil.example", "10.0.0.2/other", "10.0.0.2:0", "0.0.0.0:9000", "224.0.0.1:9000", "[fe80::1%eth0]:9000"} {
+		if _, err := meshPeerURL(peer, "/mesh/join"); err == nil {
+			t.Errorf("meshPeerURL(%q) accepted an invalid peer", peer)
+		}
+	}
+}
+
+func TestJoinRejectsInjectedPeerBeforeSendingToken(t *testing.T) {
+	var calls atomic.Int32
+	s := &Server{client: &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+		calls.Add(1)
+		return nil, fmt.Errorf("unexpected network request")
+	})}}
+	if err := s.Join("10.0.0.2@evil.example", "private-test-token", "10.0.0.3:9000"); err == nil {
+		t.Fatal("join accepted an injected peer authority")
+	}
+	if calls.Load() != 0 {
+		t.Fatal("join sent its token before validating the peer")
+	}
+}
 
 func TestRevokedPeerCertificateRejectedAfterRestart(t *testing.T) {
 	cert := &x509.Certificate{Raw: []byte("test peer certificate")}

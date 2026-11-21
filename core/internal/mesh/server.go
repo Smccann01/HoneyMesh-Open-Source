@@ -12,6 +12,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/netip"
 	"strings"
 	"sync"
 	"time"
@@ -113,6 +114,9 @@ func StartMeshServer(bindIP string, advIP string, port int, tlsCfg *tls.Config, 
 		tlsCfg: tlsCfg,
 		client: &http.Client{
 			Timeout: 5 * time.Second,
+			CheckRedirect: func(*http.Request, []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
 			Transport: &http.Transport{
 				TLSClientConfig: clientTLS,
 			},
@@ -187,6 +191,9 @@ func (s *Server) ConnectToPeer(peer string) {
 		return
 	}
 	if peer == "" {
+		return
+	}
+	if _, err := meshPeerURL(peer, "/mesh/heartbeat"); err != nil {
 		return
 	}
 	if normalizePeer(peer) == s.selfAddr() {
@@ -345,8 +352,14 @@ func (s *Server) Join(peer string, token string, addr string) error {
 		Capability: localCapability(),
 	}
 	body, _ := json.Marshal(payload)
-	url := fmt.Sprintf("https://%s/mesh/join", peer)
-	req, _ := http.NewRequest("POST", url, bytes.NewReader(body))
+	url, err := meshPeerURL(peer, "/mesh/join")
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("POST", url, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := s.client.Do(req)
 	if err != nil {
@@ -716,6 +729,14 @@ func (s *Server) cleanupPeersLocked() {
 }
 
 func (s *Server) heartbeatLoop(peer string) {
+	heartbeatURL, err := meshPeerURL(peer, "/mesh/heartbeat")
+	if err != nil {
+		return
+	}
+	peersURL, err := meshPeerURL(peer, "/mesh/peers")
+	if err != nil {
+		return
+	}
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 	for range ticker.C {
@@ -730,8 +751,10 @@ func (s *Server) heartbeatLoop(peer string) {
 			payload["stats"] = s.statsFn()
 		}
 		body, _ := json.Marshal(payload)
-		url := fmt.Sprintf("https://%s/mesh/heartbeat", normalizePeer(peer))
-		req, _ := http.NewRequest("POST", url, bytes.NewReader(body))
+		req, err := http.NewRequest("POST", heartbeatURL, bytes.NewReader(body))
+		if err != nil {
+			continue
+		}
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := s.client.Do(req)
 		if err != nil {
@@ -752,8 +775,10 @@ func (s *Server) heartbeatLoop(peer string) {
 		}()
 
 		go func() {
-			urlPeers := fmt.Sprintf("https://%s/mesh/peers", normalizePeer(peer))
-			reqPeers, _ := http.NewRequest("GET", urlPeers, nil)
+			reqPeers, err := http.NewRequest("GET", peersURL, nil)
+			if err != nil {
+				return
+			}
 			respPeers, err := s.client.Do(reqPeers)
 			if err != nil {
 				return
@@ -789,8 +814,15 @@ func (s *Server) sendBan(peer string, signal BanSignal) {
 		BanSignal:  signal,
 		ObservedAt: time.Now().UTC().Format(time.RFC3339),
 	})
-	url := fmt.Sprintf("https://%s/mesh/ban", normalizePeer(peer))
-	req, _ := http.NewRequest("POST", url, bytes.NewReader(body))
+	url, err := meshPeerURL(peer, "/mesh/ban")
+	if err != nil {
+		log.Printf("[MESH] Ban broadcast skipped invalid peer=%q", peer)
+		return
+	}
+	req, err := http.NewRequest("POST", url, bytes.NewReader(body))
+	if err != nil {
+		return
+	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := s.client.Do(req)
 	if err != nil {
@@ -824,10 +856,19 @@ func (s *Server) sendAllow(peer, ip, reason string, ttl time.Duration) {
 			"ttl_seconds": ttlSeconds,
 		})
 	}
-	url := fmt.Sprintf("https://%s/mesh/allow", normalizePeer(peer))
-	req, _ := http.NewRequest("POST", url, bytes.NewReader(body))
+	url, err := meshPeerURL(peer, "/mesh/allow")
+	if err != nil {
+		return
+	}
+	req, err := http.NewRequest("POST", url, bytes.NewReader(body))
+	if err != nil {
+		return
+	}
 	req.Header.Set("Content-Type", "application/json")
-	_, _ = s.client.Do(req)
+	resp, err := s.client.Do(req)
+	if err == nil {
+		resp.Body.Close()
+	}
 }
 
 func (s *Server) selfAddr() string {
@@ -879,6 +920,26 @@ func normalizePeer(p string) string {
 		return p + ":9000"
 	}
 	return p
+}
+
+// meshPeerURL accepts only an IP literal and an optional port. Mesh peers may
+// use private IPs, so TLS authentication and the explicit join token remain
+// required; rejecting URLs and hostnames prevents authority injection and DNS rebinding.
+func meshPeerURL(peer, path string) (string, error) {
+	peer = strings.TrimSpace(peer)
+	addrPort, err := netip.ParseAddrPort(peer)
+	if err != nil {
+		addr, parseErr := netip.ParseAddr(peer)
+		if parseErr != nil {
+			return "", fmt.Errorf("mesh peer must be an IP address with an optional port")
+		}
+		addrPort = netip.AddrPortFrom(addr, 9000)
+	}
+	addr := addrPort.Addr()
+	if !addr.IsValid() || addr.IsUnspecified() || addr.IsMulticast() || addr.Zone() != "" || addrPort.Port() == 0 {
+		return "", fmt.Errorf("invalid mesh peer address")
+	}
+	return "https://" + addrPort.String() + path, nil
 }
 
 func normalizeAddrFromReq(addr string, remoteAddr string) string {

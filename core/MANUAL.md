@@ -404,6 +404,7 @@ Join workflow:
 
 - Open `JOIN WITH INVITE`
 - Enter the peer address and token
+- Enter an IP literal with an optional port, such as `10.0.0.2:9000` or `[fd00::2]:9000`; DNS names and full URLs are rejected for this dashboard join flow.
 - HoneyMesh performs the join against the remote mesh endpoint
 
 API examples:
