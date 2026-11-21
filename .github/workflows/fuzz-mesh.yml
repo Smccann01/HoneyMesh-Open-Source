@@ -1,0 +1,28 @@
+name: Fuzz mesh peer validation
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 4 * * 0'
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [core, node/agent]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.26.10'
+          cache: false
+      - name: Fuzz mesh peer URL safety
+        run: |
+          cd "${{ matrix.module }}"
+          GOMAXPROCS=2 go test -run='^$' -fuzz=FuzzMeshPeerURL -fuzztime=45s -parallel=2 ./internal/mesh
