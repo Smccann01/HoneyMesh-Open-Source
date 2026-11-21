@@ -1,4 +1,5 @@
 import https from 'node:https';
+import tls from 'node:tls';
 import { timingSafeEqual } from 'node:crypto';
 
 const MAX_RESPONSE = 64 * 1024;
@@ -16,8 +17,24 @@ function safeUrl(value) {
 }
 
 function readPinnedJson(url, fingerprint, path) {
+  // Complete the TLS handshake and check the local agent's certificate before
+  // giving the socket to HTTP. The agent uses a self-signed local certificate.
+  const agent = new https.Agent({ keepAlive: false });
+  agent.createConnection = (_options, callback) => {
+    const socket = tls.connect({ host: '127.0.0.1', port: Number(url.port || 443), servername: 'localhost', rejectUnauthorized: false });
+    let settled = false;
+    const done = (error, connection) => { if (settled) return; settled = true; callback(error, connection); };
+    socket.once('secureConnect', () => {
+      const actual = socket.getPeerCertificate().fingerprint256;
+      if (!actual || actual.length !== fingerprint.length || !timingSafeEqual(Buffer.from(actual), Buffer.from(fingerprint))) {
+        socket.destroy(); done(new Error('agent_tls_pin_mismatch')); return;
+      }
+      done(null, socket);
+    });
+    socket.once('error', () => done(new Error('agent_unavailable')));
+  };
   return new Promise((resolve, reject) => {
-    const request = https.request(new URL(path, url), { method: 'GET', rejectUnauthorized: false, timeout: 3_000, agent: false }, (response) => {
+    const request = https.request(new URL(path, url), { method: 'GET', timeout: 3_000, agent }, (response) => {
       if (response.statusCode !== 200 || !response.headers['content-type']?.startsWith('application/json')) {
         response.resume(); reject(new Error('agent_response_unavailable')); return;
       }
@@ -29,10 +46,6 @@ function readPinnedJson(url, fingerprint, path) {
       });
       response.on('end', () => { try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8'))); } catch { reject(new Error('agent_response_invalid')); } });
     });
-    request.on('socket', (socket) => socket.on('secureConnect', () => {
-      const actual = socket.getPeerCertificate().fingerprint256;
-      if (!actual || !timingSafeEqual(Buffer.from(actual), Buffer.from(fingerprint))) request.destroy(new Error('agent_tls_pin_mismatch'));
-    }));
     request.on('timeout', () => request.destroy(new Error('agent_timeout')));
     request.on('error', reject);
     request.end();
@@ -45,8 +58,8 @@ export function createAgentOverview(config, readJson = readPinnedJson) {
   return async () => {
     try {
       const [mode, health] = await Promise.all([
-        readJson(url, config.fingerprint_sha256, '/api/mode'),
-        readJson(url, config.fingerprint_sha256, '/api/health'),
+        readJson(url, config.fingerprint_sha256.toUpperCase(), '/api/mode'),
+        readJson(url, config.fingerprint_sha256.toUpperCase(), '/api/health'),
       ]);
       if (!['TEST', 'ENFORCE', 'LOCKDOWN'].includes(mode?.mode) || mode.mode !== health?.mode) throw new Error('agent_state_mismatch');
       return { connected: true, mode: mode.mode, status: String(health.status ?? 'unknown'),
