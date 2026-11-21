@@ -9,6 +9,8 @@ bundle=$1
 [ -f "$bundle/package-lock.json" ] || fail 'lockfile missing'
 [ -f "$bundle/network-decode-firewall.service" ] || fail 'service file missing'
 [ -f /etc/honeymesh/certs/node/node.crt ] || fail 'install and start the signed HoneyMesh host agent first'
+[ -f /etc/honeymesh/certs/ca/ca.crt ] || fail 'HoneyMesh local CA certificate is missing'
+openssl verify -CAfile /etc/honeymesh/certs/ca/ca.crt /etc/honeymesh/certs/node/node.crt >/dev/null || fail 'HoneyMesh node certificate is not signed by the local CA'
 [ ! -e /opt/network-decode-firewall/current ] && [ ! -L /opt/network-decode-firewall/current ] || fail 'an existing console release is present; use the reviewed upgrade procedure'
 [ ! -e /etc/systemd/system/network-decode-firewall.service ] || fail 'an existing console service is present; use the reviewed upgrade procedure'
 command -v node >/dev/null 2>&1 || fail 'Node.js 20 or newer is required at /usr/bin/node'
@@ -64,6 +66,7 @@ printf '%s\n' "$fingerprint" | grep -Eq '^([A-Fa-f0-9]{2}:){31}[A-Fa-f0-9]{2}$' 
 printf '{"url":"https://127.0.0.1:8443","fingerprint_sha256":"%s"}\n' "$fingerprint" > /var/lib/network-decode-firewall/agent-public.json
 chown networkdecode:networkdecode /var/lib/network-decode-firewall/agent-public.json
 chmod 0600 /var/lib/network-decode-firewall/agent-public.json
+install -o networkdecode -g networkdecode -m 0600 /etc/honeymesh/certs/ca/ca.crt /var/lib/network-decode-firewall/agent-ca.crt
 
 ln -s "$release" /opt/network-decode-firewall/current
 created_link=true

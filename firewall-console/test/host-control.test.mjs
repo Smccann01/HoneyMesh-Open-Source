@@ -4,13 +4,15 @@ import { createFirewallLab } from '../src/firewall.mjs';
 import { createFirewallServer } from '../src/server.mjs';
 import { AgentError, createAgentControl } from '../src/agent-control.mjs';
 import { createServer as createHttpsServer } from 'node:https';
+import { createServer as createTcpServer } from 'node:net';
 import { X509Certificate } from 'node:crypto';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 
-const config = { url: 'https://127.0.0.1:8443', fingerprint_sha256: Array(32).fill('AA').join(':') };
+const config = { url: 'https://127.0.0.1:8443', fingerprint_sha256: Array(32).fill('AA').join(':'),
+  ca_certificate: '-----BEGIN CERTIFICATE-----\nZm9v\n-----END CERTIFICATE-----\n' };
 
 test('decision API adapter uses exact validated addresses and bounded history', async () => {
   const calls = [];
@@ -38,6 +40,7 @@ test('agent adapter bounds source and TTL and never calls broad release', async 
       uee_ready: true, xdp_attached: true, mode: 'ENFORCE' } : { ok: true };
   });
   assert.equal(createAgentControl({ ...config, url: 'https://example.com' }), null);
+  assert.equal(createAgentControl({ ...config, ca_certificate: undefined }), null);
   await assert.rejects(control.authenticate('short'), { message: 'agent_unauthorized' });
   await control.authenticate('x'.repeat(64));
   await assert.rejects(control.ban('x'.repeat(64), { ip: 'not-an-ip', ttl_seconds: 60 }), { message: 'invalid_bounded_ban' });
@@ -74,10 +77,16 @@ test('TLS pin is verified before the operator token reaches a local HTTPS servic
   const dir = await mkdtemp(join(tmpdir(), 'hm-agent-pin-'));
   const keyPath = join(dir, 'key.pem');
   const certPath = join(dir, 'cert.pem');
+  const otherKeyPath = join(dir, 'other-key.pem');
+  const otherCertPath = join(dir, 'other-cert.pem');
   execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-subj', '/CN=localhost',
+    '-addext', 'subjectAltName=DNS:localhost,IP:127.0.0.1',
     '-keyout', keyPath, '-out', certPath, '-days', '1'], { stdio: 'ignore' });
   const key = await readFile(keyPath);
   const cert = await readFile(certPath);
+  execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-subj', '/CN=other-ca',
+    '-keyout', otherKeyPath, '-out', otherCertPath, '-days', '1'], { stdio: 'ignore' });
+  const otherCert = await readFile(otherCertPath, 'utf8');
   const seen = [];
   const server = createHttpsServer({ key, cert }, (request, response) => {
     seen.push(request.headers['x-honey-token']);
@@ -87,13 +96,32 @@ test('TLS pin is verified before the operator token reaches a local HTTPS servic
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const url = `https://127.0.0.1:${server.address().port}`;
   try {
-    const wrong = createAgentControl({ url, fingerprint_sha256: Array(32).fill('00').join(':') });
+    const wrong = createAgentControl({ url, fingerprint_sha256: Array(32).fill('00').join(':'), ca_certificate: cert.toString('utf8') });
     await assert.rejects(wrong.authenticate('x'.repeat(64)), { message: 'agent_tls_pin_mismatch' });
     assert.deepEqual(seen, []);
     const fingerprint_sha256 = new X509Certificate(cert).fingerprint256;
-    const right = createAgentControl({ url, fingerprint_sha256 });
+    const untrusted = createAgentControl({ url, fingerprint_sha256, ca_certificate: otherCert });
+    await assert.rejects(untrusted.authenticate('x'.repeat(64)), { message: 'agent_unavailable' });
+    assert.deepEqual(seen, []);
+    const right = createAgentControl({ url, fingerprint_sha256, ca_certificate: cert.toString('utf8') });
     assert.equal(await right.authenticate('x'.repeat(64)), true);
     assert.deepEqual(seen, ['x'.repeat(64)]);
+
+    const sockets = new Set();
+    const stalled = createTcpServer((socket) => { sockets.add(socket); socket.on('close', () => sockets.delete(socket)); });
+    await new Promise((resolve) => stalled.listen(0, '127.0.0.1', resolve));
+    const watchdog = setTimeout(() => { for (const socket of sockets) socket.destroy(); }, 6_500);
+    try {
+      const stalledControl = createAgentControl({ url: `https://127.0.0.1:${stalled.address().port}`,
+        fingerprint_sha256, ca_certificate: cert.toString('utf8') });
+      const start = Date.now();
+      await assert.rejects(stalledControl.authenticate('x'.repeat(64)), { message: 'agent_timeout' });
+      assert.ok(Date.now() - start < 6_200, 'TLS handshake must have a deadline');
+    } finally {
+      clearTimeout(watchdog);
+      for (const socket of sockets) socket.destroy();
+      await new Promise((resolve) => stalled.close(resolve));
+    }
   } finally {
     await new Promise((resolve) => server.close(resolve));
     await rm(dir, { recursive: true });

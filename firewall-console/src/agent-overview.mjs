@@ -1,10 +1,16 @@
 import https from 'node:https';
+import tls from 'node:tls';
 import { timingSafeEqual } from 'node:crypto';
 
 const MAX_RESPONSE = 64 * 1024;
 
 function safeFingerprint(value) {
   return typeof value === 'string' && /^[A-F0-9]{2}(?::[A-F0-9]{2}){31}$/i.test(value);
+}
+
+function safeCa(value) {
+  return typeof value === 'string' && value.length <= 16_384 &&
+    /^-----BEGIN CERTIFICATE-----\s+[A-Za-z0-9+/=\s]+-----END CERTIFICATE-----\s*$/.test(value);
 }
 
 function safeUrl(value) {
@@ -15,9 +21,29 @@ function safeUrl(value) {
   } catch { return null; }
 }
 
-function readPinnedJson(url, fingerprint, path) {
+function readPinnedJson(url, fingerprint, ca, path) {
+  // Complete the TLS handshake and check the local agent's certificate before
+  // giving the socket to HTTP. The agent uses a self-signed local certificate.
+  const agent = new https.Agent({ keepAlive: false });
+  agent.createConnection = (_options, callback) => {
+    let socket;
+    try { socket = tls.connect({ host: '127.0.0.1', port: Number(url.port || 443), servername: 'localhost', ca }); }
+    catch { callback(new Error('agent_unavailable')); return; }
+    let settled = false;
+    const done = (error, connection) => { if (settled) return; settled = true; callback(error, connection); };
+    socket.setTimeout(3_000, () => { socket.destroy(); done(new Error('agent_timeout')); });
+    socket.once('secureConnect', () => {
+      socket.setTimeout(0);
+      const actual = socket.getPeerCertificate().fingerprint256;
+      if (!socket.authorized || !actual || actual.length !== fingerprint.length || !timingSafeEqual(Buffer.from(actual), Buffer.from(fingerprint))) {
+        socket.destroy(); done(new Error('agent_tls_pin_mismatch')); return;
+      }
+      done(null, socket);
+    });
+    socket.once('error', () => done(new Error('agent_unavailable')));
+  };
   return new Promise((resolve, reject) => {
-    const request = https.request(new URL(path, url), { method: 'GET', rejectUnauthorized: false, timeout: 3_000, agent: false }, (response) => {
+    const request = https.request(new URL(path, url), { method: 'GET', timeout: 3_000, agent }, (response) => {
       if (response.statusCode !== 200 || !response.headers['content-type']?.startsWith('application/json')) {
         response.resume(); reject(new Error('agent_response_unavailable')); return;
       }
@@ -29,10 +55,6 @@ function readPinnedJson(url, fingerprint, path) {
       });
       response.on('end', () => { try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8'))); } catch { reject(new Error('agent_response_invalid')); } });
     });
-    request.on('socket', (socket) => socket.on('secureConnect', () => {
-      const actual = socket.getPeerCertificate().fingerprint256;
-      if (!actual || !timingSafeEqual(Buffer.from(actual), Buffer.from(fingerprint))) request.destroy(new Error('agent_tls_pin_mismatch'));
-    }));
     request.on('timeout', () => request.destroy(new Error('agent_timeout')));
     request.on('error', reject);
     request.end();
@@ -41,12 +63,12 @@ function readPinnedJson(url, fingerprint, path) {
 
 export function createAgentOverview(config, readJson = readPinnedJson) {
   const url = safeUrl(config?.url);
-  if (!url || !safeFingerprint(config?.fingerprint_sha256)) return async () => ({ connected: false, reason: 'not_configured' });
+  if (!url || !safeFingerprint(config?.fingerprint_sha256) || !safeCa(config?.ca_certificate)) return async () => ({ connected: false, reason: 'not_configured' });
   return async () => {
     try {
       const [mode, health] = await Promise.all([
-        readJson(url, config.fingerprint_sha256, '/api/mode'),
-        readJson(url, config.fingerprint_sha256, '/api/health'),
+        readJson(url, config.fingerprint_sha256.toUpperCase(), config.ca_certificate, '/api/mode'),
+        readJson(url, config.fingerprint_sha256.toUpperCase(), config.ca_certificate, '/api/health'),
       ]);
       if (!['TEST', 'ENFORCE', 'LOCKDOWN'].includes(mode?.mode) || mode.mode !== health?.mode) throw new Error('agent_state_mismatch');
       return { connected: true, mode: mode.mode, status: String(health.status ?? 'unknown'),

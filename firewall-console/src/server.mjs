@@ -398,6 +398,10 @@ if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.me
   let agentConfig;
   try { agentConfig = JSON.parse(await readFile(join(stateDir, 'agent-public.json'), 'utf8')); }
   catch (error) { if (error.code !== 'ENOENT') throw error; }
+  if (agentConfig) {
+    try { agentConfig.ca_certificate = await readFile(join(stateDir, 'agent-ca.crt'), 'utf8'); }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
+  }
   const server = createFirewallServer({ lab, adminToken: secrets.adminToken,
     adminTokenExpiresAt: secrets.adminTokenExpiresAt, html, script,
     agentOverview: createAgentOverview(agentConfig), agentControl: createAgentControl(agentConfig),

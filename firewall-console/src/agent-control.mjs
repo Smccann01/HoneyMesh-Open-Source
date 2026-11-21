@@ -5,12 +5,14 @@ import { isIP } from 'node:net';
 
 const RESPONSE_LIMIT = 256 * 1024;
 const FINGERPRINT = /^(?:[A-F0-9]{2}:){31}[A-F0-9]{2}$/i;
+const CA_CERTIFICATE = /^-----BEGIN CERTIFICATE-----\s+[A-Za-z0-9+/=\s]+-----END CERTIFICATE-----\s*$/;
 
 function agentConfig(config) {
   try {
     const url = new URL(config?.url);
-    if (url.protocol !== 'https:' || url.hostname !== '127.0.0.1' || url.username || url.password || url.pathname !== '/' || url.search || url.hash || !FINGERPRINT.test(config?.fingerprint_sha256 ?? '')) return null;
-    return { url, fingerprint: config.fingerprint_sha256.toUpperCase() };
+    if (url.protocol !== 'https:' || url.hostname !== '127.0.0.1' || url.username || url.password || url.pathname !== '/' || url.search || url.hash || !FINGERPRINT.test(config?.fingerprint_sha256 ?? '') ||
+      typeof config?.ca_certificate !== 'string' || config.ca_certificate.length > 16_384 || !CA_CERTIFICATE.test(config.ca_certificate)) return null;
+    return { url, fingerprint: config.fingerprint_sha256.toUpperCase(), ca: config.ca_certificate };
   } catch { return null; }
 }
 
@@ -23,13 +25,17 @@ export class AgentError extends Error {
 async function pinnedRequest(config, path, token, method = 'GET', body = undefined) {
   const agent = new https.Agent({ keepAlive: false });
   agent.createConnection = (_options, callback) => {
-    const socket = tls.connect({ host: '127.0.0.1', port: Number(config.url.port || 443), servername: 'localhost', rejectUnauthorized: false });
+    let socket;
+    try { socket = tls.connect({ host: '127.0.0.1', port: Number(config.url.port || 443), servername: 'localhost', ca: config.ca }); }
+    catch { callback(new AgentError(502, 'agent_unavailable')); return; }
     let settled = false;
     const done = (error, connection) => { if (settled) return; settled = true; callback(error, connection); };
+    socket.setTimeout(5_000, () => { socket.destroy(); done(new AgentError(504, 'agent_timeout')); });
     socket.once('secureConnect', () => {
+      socket.setTimeout(0);
       const actual = socket.getPeerCertificate().fingerprint256;
       const expected = config.fingerprint;
-      if (!actual || actual.length !== expected.length || !timingSafeEqual(Buffer.from(actual), Buffer.from(expected))) {
+      if (!socket.authorized || !actual || actual.length !== expected.length || !timingSafeEqual(Buffer.from(actual), Buffer.from(expected))) {
         socket.destroy(); done(new AgentError(502, 'agent_tls_pin_mismatch')); return;
       }
       done(null, socket);
