@@ -48,7 +48,7 @@ At renewal, replace only this host's document with the newly emailed signed docu
 
 ## 4. Install the local console
 
-From the verified, extracted bundle directory, run `sudo sh ./install-console.sh .`. The script creates a dedicated `networkdecode` service user, installs root-owned program files under `/opt/network-decode-firewall/releases/0.2.1-beta.9`, and stores private local credentials under `/var/lib/network-decode-firewall`. It pins the agent's local TLS leaf certificate and starts the console on `127.0.0.1:8787`. The installer does not enable host-write actions or change HoneyMesh to ENFORCE.
+From the verified, extracted bundle directory, run `sudo sh ./install-console.sh .`. The script creates a dedicated `networkdecode` service user, installs root-owned program files under `/opt/network-decode-firewall/releases/0.2.1-beta.9`, and stores private local credentials under `/var/lib/network-decode-firewall`. It copies the agent's local CA certificate into the console's private state, pins the agent's TLS leaf certificate, and starts the console on `127.0.0.1:8787`. The installer does not enable host-write actions or change HoneyMesh to ENFORCE.
 
 Run `sudo systemctl status network-decode-firewall.service --no-pager`. On a remote VPS, run `ssh -L 8787:127.0.0.1:8787 USER@HOST` from your laptop and open `http://127.0.0.1:8787` locally. For first account setup, read the one-time bootstrap token on the host:
 

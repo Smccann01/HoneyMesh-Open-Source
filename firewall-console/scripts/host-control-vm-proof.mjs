@@ -21,7 +21,7 @@ const fingerprint = await new Promise((resolve, reject) => {
   socket.once('error', reject);
   socket.setTimeout(5_000, () => socket.destroy(new Error('agent_tls_timeout')));
 });
-const agentControl = createAgentControl({ url: 'https://127.0.0.1:8443', fingerprint_sha256: fingerprint });
+const agentControl = createAgentControl({ url: 'https://127.0.0.1:8443', fingerprint_sha256: fingerprint, ca_certificate: ca.toString('utf8') });
 const operatorToken = JSON.parse(await readFile('/var/lib/honeymesh/runtime-state.json', 'utf8')).admin_token;
 if (typeof operatorToken !== 'string' || operatorToken.length < 32) throw new Error('missing_agent_operator_token');
 const labToken = randomBytes(32).toString('hex');

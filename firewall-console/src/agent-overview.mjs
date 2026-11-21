@@ -8,6 +8,11 @@ function safeFingerprint(value) {
   return typeof value === 'string' && /^[A-F0-9]{2}(?::[A-F0-9]{2}){31}$/i.test(value);
 }
 
+function safeCa(value) {
+  return typeof value === 'string' && value.length <= 16_384 &&
+    /^-----BEGIN CERTIFICATE-----\s+[A-Za-z0-9+/=\s]+-----END CERTIFICATE-----\s*$/.test(value);
+}
+
 function safeUrl(value) {
   try {
     const url = new URL(value);
@@ -16,17 +21,19 @@ function safeUrl(value) {
   } catch { return null; }
 }
 
-function readPinnedJson(url, fingerprint, path) {
+function readPinnedJson(url, fingerprint, ca, path) {
   // Complete the TLS handshake and check the local agent's certificate before
   // giving the socket to HTTP. The agent uses a self-signed local certificate.
   const agent = new https.Agent({ keepAlive: false });
   agent.createConnection = (_options, callback) => {
-    const socket = tls.connect({ host: '127.0.0.1', port: Number(url.port || 443), servername: 'localhost', rejectUnauthorized: false });
+    let socket;
+    try { socket = tls.connect({ host: '127.0.0.1', port: Number(url.port || 443), servername: 'localhost', ca }); }
+    catch { callback(new Error('agent_unavailable')); return; }
     let settled = false;
     const done = (error, connection) => { if (settled) return; settled = true; callback(error, connection); };
     socket.once('secureConnect', () => {
       const actual = socket.getPeerCertificate().fingerprint256;
-      if (!actual || actual.length !== fingerprint.length || !timingSafeEqual(Buffer.from(actual), Buffer.from(fingerprint))) {
+      if (!socket.authorized || !actual || actual.length !== fingerprint.length || !timingSafeEqual(Buffer.from(actual), Buffer.from(fingerprint))) {
         socket.destroy(); done(new Error('agent_tls_pin_mismatch')); return;
       }
       done(null, socket);
@@ -54,12 +61,12 @@ function readPinnedJson(url, fingerprint, path) {
 
 export function createAgentOverview(config, readJson = readPinnedJson) {
   const url = safeUrl(config?.url);
-  if (!url || !safeFingerprint(config?.fingerprint_sha256)) return async () => ({ connected: false, reason: 'not_configured' });
+  if (!url || !safeFingerprint(config?.fingerprint_sha256) || !safeCa(config?.ca_certificate)) return async () => ({ connected: false, reason: 'not_configured' });
   return async () => {
     try {
       const [mode, health] = await Promise.all([
-        readJson(url, config.fingerprint_sha256.toUpperCase(), '/api/mode'),
-        readJson(url, config.fingerprint_sha256.toUpperCase(), '/api/health'),
+        readJson(url, config.fingerprint_sha256.toUpperCase(), config.ca_certificate, '/api/mode'),
+        readJson(url, config.fingerprint_sha256.toUpperCase(), config.ca_certificate, '/api/health'),
       ]);
       if (!['TEST', 'ENFORCE', 'LOCKDOWN'].includes(mode?.mode) || mode.mode !== health?.mode) throw new Error('agent_state_mismatch');
       return { connected: true, mode: mode.mode, status: String(health.status ?? 'unknown'),
