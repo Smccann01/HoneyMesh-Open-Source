@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Convert candidate to strict for diagnostic build
         env:
           COMPONENT: ${{ matrix.component }}
@@ -34,7 +34,7 @@ jobs:
           grep -q '^confinement: strict$' "$COMPONENT/snap/snapcraft.yaml"
       - name: Build strict diagnostic Snap
         id: build
-        uses: snapcore/action-build@v1
+        uses: snapcore/action-build@3bdaa03e1ba6bf59a65f84a751d943d549a54e79 # v1
         with:
           path: ${{ matrix.component }}
       - name: Probe BPF and XDP with strict confinement
@@ -341,7 +341,7 @@ jobs:
           SNAP_FILE: ${{ steps.build.outputs.snap }}
         run: sha256sum "$SNAP_FILE" > STRICT-SNAP-SHA256SUMS
       - name: Preserve tested strict diagnostic package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ matrix.snap_name }}-strict-diagnostic
           path: |
