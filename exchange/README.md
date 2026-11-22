@@ -2,6 +2,8 @@
 
 The self-hosted Exchange provides authenticated enrollment, signed machine APIs, a network admin console, and opt-in defensive observation sharing. It is licensed under [AGPL-3.0-only](LICENSE). Each installation provisions its own administrator and stores its own credentials and data.
 
+Customer-operated Exchanges need no Network Decode subscription. The free Core pilot, the separate $45 HoneyMesh 2.0 package, and the $5-per-node monthly hosted Exchange are distinct paths. See [deployment modes](docs/DEPLOYMENT_MODES.md) and the [machine API contract](docs/MACHINE_API_V1.md) before connecting a node.
+
 ## Local setup
 
 Install dependencies, configure a private durable SQLite database path, and build the app:

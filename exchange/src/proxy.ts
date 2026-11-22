@@ -8,11 +8,7 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (pathname === "/activity") {
-    const response = NextResponse.next();
-    response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
-    return response;
-  }
+  if (pathname === "/activity") return NextResponse.redirect(new URL("/console", request.url));
 
   if (pathname === "/console") {
     const response = NextResponse.next();
