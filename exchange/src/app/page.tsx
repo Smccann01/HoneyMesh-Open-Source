@@ -4,9 +4,9 @@ import Link from "next/link";
 import "./activity/activity.css";
 
 export const metadata: Metadata = {
-  title: "HoneyMesh Exchange",
+  title: "HoneyMesh Exchange Community | Self-hosted intelligence",
   description:
-    "HoneyMesh Exchange is a private pilot for opt-in network discovery and short-lived signal sharing. Distributed enforcement qualification is ongoing.",
+    "Operate your own HoneyMesh Exchange with local administration, opt-in sharing, and no Network Decode hosted subscription.",
   alternates: { canonical: "/" },
 };
 
@@ -25,25 +25,24 @@ export default function HomePage() {
         </header>
 
         <section className="activity-hero exchange-home-hero">
-          <div className="activity-eyebrow"><span className="activity-live-dot" /> HONEY MESH EXCHANGE · PRIVATE PILOT</div>
-          <h1>Stronger defense<br /><em>through connection.</em></h1>
-          <p>HoneyMesh agents pair deception traps with eBPF/XDP packet controls. In the private Exchange pilot, participating networks can evaluate signed, short-lived signal sharing under their own local policies. Distributed enforcement is still being qualified and is outside the paid Core Beta.</p>
+          <div className="activity-eyebrow"><span className="activity-live-dot" /> HONEY MESH EXCHANGE · SELF-HOSTED COMMUNITY</div>
+          <h1>One Node Detects.<br /><em>The Network Learns.</em></h1>
+          <p>Operate an Exchange for networks you control. Enroll nodes with one-use administrator tokens, share eligible short-lived observations only when you opt in, and keep every enforcement decision at the receiving node. Your private Exchange needs no Network Decode subscription.</p>
           <div className="exchange-home-actions">
-            <Link className="exchange-home-primary" href="/activity">View Exchange activity <span aria-hidden="true">↗</span></Link>
-            <Link className="exchange-home-secondary" href="/downloads">Paid Core Beta <span aria-hidden="true">↗</span></Link>
-            <a className="exchange-home-secondary" href="https://network-decode.com/pricing">Paid beta pilot <span aria-hidden="true">↗</span></a>
-            <a className="exchange-home-secondary" href="https://network-decode.com/validation">Technical validation <span aria-hidden="true">↗</span></a>
-            <Link className="exchange-home-secondary" href="/console">Network admin console <span aria-hidden="true">↗</span></Link>
-            <a className="exchange-home-secondary" href="https://network-decode.com/docs">Read the docs <span aria-hidden="true">↗</span></a>
+            <Link className="exchange-home-primary" href="/console">Open your private console <span aria-hidden="true">↗</span></Link>
+            <Link className="exchange-home-secondary" href="/downloads">Choose a node path <span aria-hidden="true">↗</span></Link>
+            <a className="exchange-home-secondary" href="https://network-decode.com/private-exchange">Run your own Exchange <span aria-hidden="true">↗</span></a>
+            <a className="exchange-home-secondary" href="https://network-decode.com/products/honeymesh-exchange">Explore hosted membership <span aria-hidden="true">↗</span></a>
           </div>
+          <p>Network observations and block data stay in authenticated services. This public page does not show live activity.</p>
         </section>
 
         <section className="activity-explain exchange-home-explain">
           <div><p className="activity-kicker">BUILT FOR CONTROL</p><h2>Participation is a choice.</h2></div>
           <div className="activity-explain-grid">
-            <article><b>01</b><h3>Opt in</h3><p>Pilot operators decide whether their clusters appear in discovery. Hidden networks stay hidden.</p></article>
-            <article><b>02</b><h3>Connect directly</h3><p>Pilot networks can establish bilateral sharing after both sides approve and configure trust.</p></article>
-            <article><b>03</b><h3>Use the Exchange</h3><p>Eligible pilot peers can receive approved, short-lived signals through signed machine APIs; each node decides whether to enforce.</p></article>
+            <article><b>01</b><h3>Opt in</h3><p>Operators decide whether their clusters appear in discovery. Hidden networks stay hidden.</p></article>
+            <article><b>02</b><h3>Connect directly</h3><p>Networks can establish bilateral sharing after both sides approve and configure trust.</p></article>
+            <article><b>03</b><h3>Use the Exchange</h3><p>Eligible peers can receive approved, short-lived signals through signed machine APIs; each node decides whether to enforce.</p></article>
           </div>
         </section>
         <footer className="activity-footer"><span>HoneyMesh Exchange · honeymesh.io</span><a href="https://network-decode.com/">About HoneyMesh ↗</a></footer>

@@ -42,7 +42,9 @@ jobs:
           cd exchange
           npm ci
           npm run build
+          npm run test:activity
           npm run test:network-admin
+          npm run test:bootstrap
           npm run test:discovery
           npm run test:protocol
       - name: Build Core packages twice
