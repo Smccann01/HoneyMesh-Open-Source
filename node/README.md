@@ -2,7 +2,7 @@
 
 HoneyMesh Node combines a Node.js application Guard with an authenticated local bridge to a HoneyMesh Linux agent. The source is free; local application controls, scoped host grants, and direct mesh do not require a purchase. TEST is the initial agent mode, and community Exchange intelligence is observation-only by default.
 
-The Community agent built from this source revision supports up to five direct mesh peers per node; published pilot packages may predate this limit. Direct mesh requires an operator-configured cluster identity, mutually verified TLS certificates, and explicit opt-in. The receiving agent decides whether to enforce a signal. A customer-operated Community Exchange is separate from direct mesh and remains free. Local application events must identify a verified client source and pass the agent's authorization and bounded-action checks.
+The Community agent built from this source revision supports up to five direct mesh peers per node; published pilot packages may predate this limit. The official build is intended for a noncritical proof of concept and fit test before considering the separate private HoneyMesh 2.0 purchase. Direct mesh requires an operator-configured cluster identity, mutually verified TLS certificates, and explicit opt-in. The receiving agent decides whether to enforce a signal. A customer-operated Community Exchange is separate from direct mesh and remains free. Local application events must identify a verified client source and pass the agent's authorization and bounded-action checks.
 
 ## Components
 
