@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -27,6 +28,8 @@ import (
 )
 
 const Version = "v2.3.7-rc1-nodepro1"
+
+var meshPeersMu sync.RWMutex
 
 func printStartupBanner() {
 	fmt.Println("\x1b[38;5;208m" +
@@ -430,25 +433,26 @@ func init() {
 }
 
 func meshPeerCount() int {
-	seen := make(map[string]struct{})
-	for _, p := range config.Mesh.Peers {
-		peer := normalizePeerAddr(p)
-		if peer == "" {
-			continue
-		}
-		seen[peer] = struct{}{}
-	}
-	return len(seen)
+	return len(selectMeshPeers(snapshotMeshPeers(), 0))
 }
 
 // activeMeshPeers preserves configured order. Existing settings are retained
 // after a tier change, but only peers within the current limit reconnect.
 func activeMeshPeers() []string {
-	max := meshMaxNodesAllowed()
+	return selectMeshPeers(snapshotMeshPeers(), meshMaxNodesAllowed())
+}
+
+func snapshotMeshPeers() []string {
+	meshPeersMu.RLock()
+	defer meshPeersMu.RUnlock()
+	return append([]string(nil), config.Mesh.Peers...)
+}
+
+func selectMeshPeers(configured []string, max int) []string {
 	limit := max - 1
-	peers := make([]string, 0, len(config.Mesh.Peers))
-	seen := make(map[string]struct{}, len(config.Mesh.Peers))
-	for _, raw := range config.Mesh.Peers {
+	peers := make([]string, 0, len(configured))
+	seen := make(map[string]struct{}, len(configured))
+	for _, raw := range configured {
 		peer := normalizePeerAddr(raw)
 		if peer == "" {
 			continue
@@ -488,12 +492,27 @@ func addPeer(peer string) {
 	if peer == "" {
 		return
 	}
-	if !activeMeshPeerConfigured(peer) {
-		if max := meshMaxNodesAllowed(); max > 0 && 1+meshPeerCount() >= max {
+	peer = normalizePeerAddr(peer)
+	meshPeersMu.Lock()
+	max := meshMaxNodesAllowed()
+	active := selectMeshPeers(config.Mesh.Peers, max)
+	configured := false
+	for _, p := range active {
+		if p == peer {
+			configured = true
+			break
+		}
+	}
+	if !configured {
+		if max > 0 && len(selectMeshPeers(config.Mesh.Peers, 0)) >= max-1 {
+			meshPeersMu.Unlock()
 			log.Printf("[MESH] Direct peer not added: node limit reached (%d direct peers)", max-1)
 			return
 		}
 		config.Mesh.Peers = append(config.Mesh.Peers, peer)
+	}
+	meshPeersMu.Unlock()
+	if !configured {
 		saveConfig()
 	}
 	// Auto-trust only peers that the local node can actually use.
@@ -507,6 +526,7 @@ func removePeer(peer string) {
 	if peer == "" {
 		return
 	}
+	meshPeersMu.Lock()
 	out := make([]string, 0, len(config.Mesh.Peers))
 	for _, p := range config.Mesh.Peers {
 		if p != peer {
@@ -514,5 +534,6 @@ func removePeer(peer string) {
 		}
 	}
 	config.Mesh.Peers = out
+	meshPeersMu.Unlock()
 	saveConfig()
 }
