@@ -956,7 +956,7 @@ func apiMeshJoin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "mesh not running", http.StatusBadRequest)
 		return
 	}
-	if max := license.MaxNodes(); max > 0 {
+	if max := meshMaxNodesAllowed(); max > 0 && !activeMeshPeerConfigured(req.Peer) {
 		// Count local node + known peers
 		if 1+meshPeerCount() >= max {
 			http.Error(w, "max nodes reached", http.StatusForbidden)
@@ -1296,6 +1296,8 @@ func apiHealth(w http.ResponseWriter, r *http.Request) {
 		"premium_enabled":                     premiumFeaturesEnabled(),
 		"trusted_network_sharing_enabled":     trustedNetworkSharingEnabled(),
 		"trusted_mesh_network_enabled":        trustedMeshNetworkEnabled(),
+		"direct_mesh_peer_limit":              directMeshPeerLimit(),
+		"direct_mesh_peer_count":              len(activeMeshPeers()),
 		"trusted_network_participation":       trustedMeshNetworkEnabled() && nodeIdentityReady(),
 		"nettools_exchange_enabled":           config.Exchange.Enabled,
 		"nettools_exchange_configured":        exchangeConfigured(),
@@ -2670,6 +2672,7 @@ var dashboardHTML = `
                 <div style="margin-bottom:14px;padding:12px;border:1px solid var(--border);border-radius:10px;background:rgba(0,0,0,0.18);">
                     <div style="font-size:0.82rem;font-weight:700;color:#e2e8f0;margin-bottom:6px;">Join Trusted HoneyMesh Networks</div>
                     <div style="font-size:0.74rem;color:#9aa7c7;margin-bottom:10px;">Enable peer-to-peer trusted mesh participation so this node can issue invites, join approved HoneyMesh networks, and exchange validated defense signals with trusted peers.</div>
+                    <div style="font-size:0.72rem;color:#9aa7c7;margin-bottom:10px;">Community supports up to five direct peers per node. A self-hosted Community Exchange remains independent and free.</div>
                     <label style="display:flex;align-items:center;gap:8px;font-size:0.76rem;color:#cbd5f5;font-weight:600;">
                         <input id="trusted-mesh-network" type="checkbox" />
                         ALLOW THIS NODE TO JOIN TRUSTED MESH NETWORKS

@@ -327,7 +327,7 @@ func main() {
 	}
 
 	if trustedMeshNetworkEnabled() {
-		for _, peer := range config.Mesh.Peers {
+		for _, peer := range activeMeshPeers() {
 			if peer != config.BindIP && !strings.HasPrefix(peer, config.BindIP+":") {
 				go scp.ConnectToPeer(peer)
 			}
@@ -408,7 +408,8 @@ func main() {
 
 func init() {
 	mesh.ValidateJoinToken = validateAndUseJoinToken
-	mesh.MaxNodesAllowed = license.MaxNodes
+	mesh.MaxNodesAllowed = meshMaxNodesAllowed
+	mesh.PeerConfigured = activeMeshPeerConfigured
 	mesh.SharingEnabled = trustedMeshNetworkEnabled
 	mesh.LocalPeerCapability = currentPeerCapability
 	mesh.ValidatePeerCapability = validatePeerCapability
@@ -431,6 +432,40 @@ func meshPeerCount() int {
 	return len(seen)
 }
 
+// activeMeshPeers preserves configured order. Existing settings are retained
+// after a tier change, but only peers within the current limit reconnect.
+func activeMeshPeers() []string {
+	max := meshMaxNodesAllowed()
+	limit := max - 1
+	peers := make([]string, 0, len(config.Mesh.Peers))
+	seen := make(map[string]struct{}, len(config.Mesh.Peers))
+	for _, raw := range config.Mesh.Peers {
+		peer := normalizePeerAddr(raw)
+		if peer == "" {
+			continue
+		}
+		if _, ok := seen[peer]; ok {
+			continue
+		}
+		if max > 0 && len(peers) >= limit {
+			break
+		}
+		seen[peer] = struct{}{}
+		peers = append(peers, peer)
+	}
+	return peers
+}
+
+func activeMeshPeerConfigured(peer string) bool {
+	peer = normalizePeerAddr(peer)
+	for _, configured := range activeMeshPeers() {
+		if configured == peer {
+			return true
+		}
+	}
+	return false
+}
+
 func handleRemoteBan(peer string, signal mesh.BanSignal, observedAt time.Time) {
 	emitRemoteMeshSignal(peer, signal, observedAt)
 	handleRemoteReport(peer, signal, observedAt)
@@ -444,20 +479,17 @@ func addPeer(peer string) {
 	if peer == "" {
 		return
 	}
-	// Auto-trust mesh peers (whitelist peer IPs).
-	if host, _, err := net.SplitHostPort(peer); err == nil {
-		addTrustedPeerIP(host)
-	}
-	exists := false
-	for _, p := range config.Mesh.Peers {
-		if p == peer {
-			exists = true
-			break
+	if !activeMeshPeerConfigured(peer) {
+		if max := meshMaxNodesAllowed(); max > 0 && 1+meshPeerCount() >= max {
+			log.Printf("[MESH] Direct peer not added: node limit reached (%d direct peers)", max-1)
+			return
 		}
-	}
-	if !exists {
 		config.Mesh.Peers = append(config.Mesh.Peers, peer)
 		saveConfig()
+	}
+	// Auto-trust only peers that the local node can actually use.
+	if host, _, err := net.SplitHostPort(peer); err == nil {
+		addTrustedPeerIP(host)
 	}
 	broadcastPeers()
 }

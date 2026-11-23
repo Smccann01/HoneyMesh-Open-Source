@@ -6,6 +6,25 @@ import (
 	"honeymesh/internal/license"
 )
 
+// Community builds support a small direct mesh for evaluation. This is a
+// product default in the open-source implementation, not a license restriction
+// on modified versions or on a customer-operated Exchange.
+const communityMaxDirectPeers = 5
+
+func meshMaxNodesAllowed() int {
+	if licenseDisplayName() == "Community" {
+		return communityMaxDirectPeers + 1 // include this node
+	}
+	return license.MaxNodes()
+}
+
+func directMeshPeerLimit() int {
+	if max := meshMaxNodesAllowed(); max > 0 {
+		return max - 1
+	}
+	return 0 // unlimited by this build; trust and operator controls still apply
+}
+
 func premiumFeaturesEnabled() bool {
 	return license.PremiumEnabled()
 }
@@ -70,7 +89,14 @@ func setTrustedMeshNetwork(enabled bool) bool {
 func applyTrustedMeshNetworkState() {
 	if trustedMeshNetworkEnabled() {
 		if scp != nil {
-			for _, peer := range config.Mesh.Peers {
+			if meshMaxNodesAllowed() > 0 {
+				for _, peer := range scp.KnownPeers() {
+					if !activeMeshPeerConfigured(peer) {
+						scp.RemovePeer(peer)
+					}
+				}
+			}
+			for _, peer := range activeMeshPeers() {
 				if peer == "" {
 					continue
 				}

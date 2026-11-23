@@ -481,6 +481,11 @@ func handleTUICommand(reader *bufio.Reader, screen *int, mu *sync.Mutex, inputAc
 			time.Sleep(2 * time.Second)
 			return false
 		}
+		if max := meshMaxNodesAllowed(); max > 0 && !activeMeshPeerConfigured(parts[1]) && 1+meshPeerCount() >= max {
+			fmt.Printf("mesh join blocked: direct peer limit reached (%d)\n", max-1)
+			time.Sleep(2 * time.Second)
+			return false
+		}
 		addr := fmt.Sprintf("%s:%s", config.BindIP, config.MeshPort)
 		if err := scp.Join(parts[1], parts[2], addr); err != nil {
 			fmt.Printf("join error: %v\n", err)

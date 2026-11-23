@@ -18,6 +18,8 @@ HoneyMesh Exchange is a lightweight discovery and intelligence plane. It helps o
 
 Trusted mesh participation is the peer-to-peer layer. It is how approved HoneyMesh networks exchange validated defense signals after an operator chooses which external networks to trust and at what level.
 
+The official Community Core build supports up to five directly connected peers per node. A sixth direct peer is refused; an existing peer can reconnect. If an existing Pro mesh has more than five configured peers and the license lapses, the configuration is retained but only the first five distinct peers in configuration order reconnect in Community mode. Local protection and a customer-operated Exchange keep working. The Community source remains under its published open-source license; this build default is not a restriction on modifying or redistributing that source.
+
 ---
 
 **2. Requirements**

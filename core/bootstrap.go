@@ -204,7 +204,7 @@ func generateJoinToken() {
 
 func performJoin(url string, token string) {
 	log.Printf("[MESH] Joining cluster at %s", url)
-	if max := license.MaxNodes(); max > 0 {
+	if max := meshMaxNodesAllowed(); max > 0 {
 		if 1+meshPeerCount() >= max {
 			log.Fatalf("[MESH] Join blocked: max nodes reached (%d)", max)
 		}
@@ -262,14 +262,14 @@ func performJoin(url string, token string) {
 		Peers []string `json:"peers"`
 	}
 	_ = json.NewDecoder(resp.Body).Decode(&out)
-	for _, p := range out.Peers {
-		addPeer(p)
-	}
 	peerHost := strings.TrimPrefix(joinURL, "https://")
 	if idx := strings.Index(peerHost, "/"); idx >= 0 {
 		peerHost = peerHost[:idx]
 	}
 	addPeer(peerHost)
+	for _, p := range out.Peers {
+		addPeer(p)
+	}
 	log.Println("[MESH] Join successful. Restart node to connect.")
 }
 
@@ -293,7 +293,7 @@ func startMeshReconnectLoop(shutdown <-chan struct{}) {
 		for {
 			select {
 			case <-ticker.C:
-				for _, peer := range config.Mesh.Peers {
+				for _, peer := range activeMeshPeers() {
 					if peer == "" {
 						continue
 					}
