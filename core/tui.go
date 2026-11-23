@@ -493,6 +493,12 @@ func handleTUICommand(reader *bufio.Reader, screen *int, mu *sync.Mutex, inputAc
 			return false
 		}
 		addPeer(parts[1])
+		if !activeMeshPeerConfigured(parts[1]) {
+			scp.RemovePeer(parts[1])
+			fmt.Println("mesh join blocked: direct peer limit reached")
+			time.Sleep(2 * time.Second)
+			return false
+		}
 	case "meshrevoke":
 		if len(parts) < 2 {
 			return false

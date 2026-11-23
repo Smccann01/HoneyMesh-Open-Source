@@ -204,7 +204,7 @@ func generateJoinToken() {
 
 func performJoin(url string, token string) {
 	log.Printf("[MESH] Joining cluster at %s", url)
-	if max := meshMaxNodesAllowed(); max > 0 {
+	if max := meshMaxNodesAllowed(); max > 0 && !activeMeshPeerConfigured(url) {
 		if 1+meshPeerCount() >= max {
 			log.Fatalf("[MESH] Join blocked: max nodes reached (%d)", max)
 		}
@@ -267,6 +267,9 @@ func performJoin(url string, token string) {
 		peerHost = peerHost[:idx]
 	}
 	addPeer(peerHost)
+	if !activeMeshPeerConfigured(peerHost) {
+		log.Fatalf("[MESH] Join blocked: direct peer limit reached")
+	}
 	for _, p := range out.Peers {
 		addPeer(p)
 	}

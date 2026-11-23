@@ -970,6 +970,11 @@ func apiMeshJoin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	addPeer(req.Peer)
+	if !activeMeshPeerConfigured(req.Peer) {
+		scp.RemovePeer(req.Peer)
+		http.Error(w, "direct peer limit reached", http.StatusForbidden)
+		return
+	}
 	broadcastPeers()
 	writeJSON(w, map[string]bool{"ok": true})
 }
