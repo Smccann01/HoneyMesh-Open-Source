@@ -94,7 +94,7 @@ func getOrCreateTrust(peer string) *peerTrust {
 	}
 	// seed trust for configured peers a bit higher
 	score := 10.0
-	for _, p := range config.Mesh.Peers {
+	for _, p := range snapshotMeshPeers() {
 		if normalizePeerAddr(p) == peer {
 			score = 35.0
 			break
@@ -581,8 +581,7 @@ func trustSnapshot() []trustView {
 }
 
 func seedTrustPeers() {
-	peers := make([]string, 0, len(config.Mesh.Peers))
-	peers = append(peers, config.Mesh.Peers...)
+	peers := snapshotMeshPeers()
 	if scp != nil {
 		for p := range scp.PeerStats() {
 			peers = append(peers, p)

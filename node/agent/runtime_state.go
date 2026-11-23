@@ -60,7 +60,7 @@ func currentRuntimeState() runtimeState {
 		TrustedMeshNetworkEnabled:    config.TrustedMeshNetworkEnabled,
 		Ifaces:                       config.Ifaces,
 		Traps:                        config.Traps,
-		MeshPeers:                    config.Mesh.Peers,
+		MeshPeers:                    snapshotMeshPeers(),
 		MeshAuthoritativePeers:       config.Mesh.AuthoritativePeers,
 		MeshTrustedNetworks:          config.Mesh.TrustedNetworks,
 		MeshRevokedPeerCerts:         config.Mesh.RevokedPeerCerts,
