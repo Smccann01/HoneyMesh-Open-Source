@@ -469,6 +469,13 @@ func (s *Server) handleJoin(w http.ResponseWriter, r *http.Request) {
 	if s.onPeer != nil {
 		s.onPeer(addr)
 	}
+	// Another local peer addition may have filled the last slot after the
+	// reservation. Do not report a successful join for an unconfigured peer.
+	if MaxNodesAllowed != nil && MaxNodesAllowed() > 0 && PeerConfigured != nil && !PeerConfigured(addr) {
+		s.RemovePeer(addr)
+		http.Error(w, "direct peer limit reached", http.StatusForbidden)
+		return
+	}
 	peers := s.peerList()
 	_ = json.NewEncoder(w).Encode(map[string][]string{"peers": peers})
 }
