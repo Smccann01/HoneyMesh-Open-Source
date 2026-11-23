@@ -66,7 +66,7 @@ sudo systemctl start honeymesh.service
 Install the current Debian package:
 
 ```bash
-sudo dpkg -i /path/to/honeymesh_2.3.6-rc4-corefirewall4_amd64.deb
+sudo dpkg -i /path/to/honeymesh_2.3.6-rc7-community5_amd64.deb
 ```
 
 The package installs a Community configuration bound to `127.0.0.1`, with no interfaces or traps selected and sharing disabled. On a systemd host, a fresh install starts the service. Edit `/etc/honeymesh/honeymesh.json` to choose the interfaces and traps you intend to protect, then run `sudo systemctl restart honeymesh.service`; the service detects the operator config change and applies those selections. The configuration is root-owned and readable by the `honeymesh` service group. The first start saves a unique admin token in `/var/lib/honeymesh/runtime-state.json`. The installer generates local TLS certificates per machine; for remote dashboard access or trusted mesh, configure certificates and CA trust for the actual network names and addresses. Never copy another node's private key or live configuration into an installation package.
