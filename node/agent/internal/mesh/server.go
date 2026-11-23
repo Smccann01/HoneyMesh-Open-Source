@@ -215,6 +215,9 @@ func (s *Server) BroadcastBan(signal BanSignal) {
 	s.mu.Lock()
 	peers := make([]string, 0, len(s.peers))
 	for p := range s.peers {
+		if MaxNodesAllowed != nil && MaxNodesAllowed() > 0 && PeerConfigured != nil && !PeerConfigured(p) {
+			continue
+		}
 		peers = append(peers, p)
 	}
 	s.mu.Unlock()
@@ -232,6 +235,9 @@ func (s *Server) BroadcastAllow(ip string, reason string, ttl time.Duration) {
 	s.mu.Lock()
 	peers := make([]string, 0, len(s.peers))
 	for p := range s.peers {
+		if MaxNodesAllowed != nil && MaxNodesAllowed() > 0 && PeerConfigured != nil && !PeerConfigured(p) {
+			continue
+		}
 		peers = append(peers, p)
 	}
 	s.mu.Unlock()
@@ -330,6 +336,8 @@ func (s *Server) isRevokedCertificate(r *http.Request) bool {
 	if fingerprint == "" {
 		return false
 	}
+	s.admissionMu.Lock()
+	defer s.admissionMu.Unlock()
 	s.mu.Lock()
 	_, revoked := s.revokedCerts[fingerprint]
 	s.mu.Unlock()
@@ -342,6 +350,26 @@ func (s *Server) recordPeerCertificate(peer string, r *http.Request) {
 		s.peerCerts[normalizePeer(peer)] = fingerprint
 		s.mu.Unlock()
 	}
+}
+
+// A finite direct-peer limit also gates intelligence and discovery requests.
+// The mTLS certificate must belong to one of this node's admitted peers.
+func (s *Server) admittedDirectPeerRequest(r *http.Request) bool {
+	if MaxNodesAllowed == nil || MaxNodesAllowed() <= 0 || PeerConfigured == nil {
+		return true
+	}
+	fingerprint := peerCertificateFingerprint(r)
+	if fingerprint == "" {
+		return false
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for peer, known := range s.peerCerts {
+		if known == fingerprint && PeerConfigured(peer) {
+			return true
+		}
+	}
+	return false
 }
 
 // Join sends a join request to a peer.
@@ -372,6 +400,15 @@ func (s *Server) Join(peer string, token string, addr string) error {
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("join rejected: %s", resp.Status)
+	}
+	if resp.TLS != nil && len(resp.TLS.PeerCertificates) > 0 {
+		fingerprint := sha256.Sum256(resp.TLS.PeerCertificates[0].Raw)
+		s.mu.Lock()
+		if s.peerCerts == nil {
+			s.peerCerts = make(map[string]string)
+		}
+		s.peerCerts[normalizePeer(peer)] = hex.EncodeToString(fingerprint[:])
+		s.mu.Unlock()
 	}
 	var out struct {
 		Peers []string `json:"peers"`
@@ -417,7 +454,7 @@ func (s *Server) handleJoin(w http.ResponseWriter, r *http.Request) {
 	addr := normalizeAddrFromReq(req.Addr, r.RemoteAddr)
 	s.admissionMu.Lock()
 	defer s.admissionMu.Unlock()
-	if !s.reserveDirectPeer(addr) {
+	if !s.reserveDirectPeer(addr, false) {
 		http.Error(w, "direct peer limit reached", http.StatusForbidden)
 		return
 	}
@@ -447,7 +484,7 @@ var PeerConfigured func(peer string) bool
 
 // reserveDirectPeer serializes admission with the caller's onPeer callback.
 // An active slot is reserved before the configured peer list is updated.
-func (s *Server) reserveDirectPeer(peer string) bool {
+func (s *Server) reserveDirectPeer(peer string, requireConfigured bool) bool {
 	max := 0
 	if MaxNodesAllowed != nil {
 		max = MaxNodesAllowed()
@@ -456,6 +493,9 @@ func (s *Server) reserveDirectPeer(peer string) bool {
 		return true
 	}
 	p := normalizePeer(peer)
+	if requireConfigured && PeerConfigured != nil && !PeerConfigured(p) {
+		return false // a heartbeat cannot replace an operator-approved join
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if PeerConfigured != nil && PeerConfigured(p) {
@@ -529,7 +569,7 @@ func (s *Server) handleHeartbeat(w http.ResponseWriter, r *http.Request) {
 		addr := normalizeAddrFromReq(req.Addr, r.RemoteAddr)
 		s.admissionMu.Lock()
 		defer s.admissionMu.Unlock()
-		if !s.reserveDirectPeer(addr) {
+		if !s.reserveDirectPeer(addr, true) {
 			http.Error(w, "direct peer limit reached", http.StatusForbidden)
 			return
 		}
@@ -574,6 +614,10 @@ func (s *Server) handlePeers(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	if !s.admittedDirectPeerRequest(r) {
+		http.Error(w, "direct peer not admitted", http.StatusForbidden)
+		return
+	}
 	peers := s.KnownPeers()
 	_ = json.NewEncoder(w).Encode(map[string][]string{"peers": peers})
 }
@@ -585,6 +629,10 @@ func (s *Server) handleBan(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if !s.admittedDirectPeerRequest(r) {
+		http.Error(w, "direct peer not admitted", http.StatusForbidden)
 		return
 	}
 	var req struct {
@@ -626,6 +674,10 @@ func (s *Server) handleAllow(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if !s.admittedDirectPeerRequest(r) {
+		http.Error(w, "direct peer not admitted", http.StatusForbidden)
 		return
 	}
 	var req struct {
@@ -706,6 +758,9 @@ func (s *Server) peerList() []string {
 	defer s.mu.Unlock()
 	out := make([]string, 0, len(s.peers))
 	for p := range s.peers {
+		if MaxNodesAllowed != nil && MaxNodesAllowed() > 0 && PeerConfigured != nil && !PeerConfigured(p) {
+			continue
+		}
 		out = append(out, p)
 	}
 	return out
