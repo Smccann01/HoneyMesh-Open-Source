@@ -95,3 +95,29 @@ func TestDirectPeerAdmissionCapsJoinAndHeartbeat(t *testing.T) {
 		t.Fatalf("uncapped heartbeat status = %d", got)
 	}
 }
+
+func TestJoinRejectedWhenLocalPeerSlotChangesDuringAdmission(t *testing.T) {
+	oldSharing, oldToken, oldMax := SharingEnabled, ValidateJoinToken, MaxNodesAllowed
+	oldCount, oldConfigured := PeerCount, PeerConfigured
+	defer func() {
+		SharingEnabled, ValidateJoinToken, MaxNodesAllowed = oldSharing, oldToken, oldMax
+		PeerCount, PeerConfigured = oldCount, oldConfigured
+	}()
+	SharingEnabled = func() bool { return true }
+	ValidateJoinToken = func(string) bool { return true }
+	MaxNodesAllowed = func() int { return 6 }
+	PeerCount = func() int { return 0 }
+	PeerConfigured = func(string) bool { return false }
+	s := &Server{
+		peers: make(map[string]time.Time), peersKnown: make(map[string]time.Time),
+		stats: make(map[string]PeerStats), caps: make(map[string]PeerCapability),
+		peerCerts: make(map[string]string),
+		onPeer:    func(string) {}, // local configuration refused the reserved slot
+	}
+	req := httptest.NewRequest(http.MethodPost, "/mesh/join", strings.NewReader(`{"token":"t","addr":"10.0.0.1:9000"}`))
+	rec := httptest.NewRecorder()
+	s.handleJoin(rec, req)
+	if rec.Code != http.StatusForbidden || s.PeerCount() != 0 || s.KnownPeerCount() != 0 {
+		t.Fatalf("unconfigured join status=%d active=%d known=%d", rec.Code, s.PeerCount(), s.KnownPeerCount())
+	}
+}
