@@ -24,7 +24,7 @@ HoneyMesh is a distributed cybersecurity platform that detects, analyzes, and bl
 
 ### 3.3 Federation
 - P2P mesh with join tokens and mutual TLS
-- Trusted Network Sharing requires explicit operator opt-in; official Community builds allow up to five direct peers per node
+- Trusted Network Sharing requires explicit operator opt-in; Community builds from this source revision allow up to five direct peers per node
 - Stable node identity backed by an Ed25519 signing key
 - `v2` peer capability exchange during join and heartbeat
 - Structured, sanitized attack-intelligence ban signals shared across peers
@@ -43,7 +43,7 @@ HoneyMesh is a distributed cybersecurity platform that detects, analyzes, and bl
 - Clock rollback detection via `license.clock`
 - Two-tier model: Community and Pro
 - Local protection available in Community and Pro
-- Trusted Network Sharing is disabled by default in every tier; the official Community build supports up to five direct peers per node
+- Trusted Network Sharing is disabled by default in every tier; the Community build from this source revision supports up to five direct peers per node
 - Modes: TEST / ENFORCE / LOCKDOWN
 
 ## 4. System Architecture (Layers → Code)
