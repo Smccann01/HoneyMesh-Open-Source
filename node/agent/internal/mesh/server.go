@@ -84,6 +84,7 @@ type Server struct {
 	onPeer              PeerHandler
 	statsFn             func() HeartbeatStats
 	strictHeartbeatAddr bool
+	admissionMu         sync.Mutex
 
 	mu           sync.Mutex
 	peers        map[string]time.Time
@@ -188,6 +189,9 @@ func (s *Server) Shutdown(ctx context.Context) error {
 // ConnectToPeer establishes a heartbeat loop with a peer.
 func (s *Server) ConnectToPeer(peer string) {
 	if SharingEnabled != nil && !SharingEnabled() {
+		return
+	}
+	if MaxNodesAllowed != nil && MaxNodesAllowed() > 0 && PeerConfigured != nil && !PeerConfigured(peer) {
 		return
 	}
 	if peer == "" {
@@ -411,12 +415,11 @@ func (s *Server) handleJoin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	addr := normalizeAddrFromReq(req.Addr, r.RemoteAddr)
-	if MaxNodesAllowed != nil && PeerCount != nil {
-		max := MaxNodesAllowed()
-		if max > 0 && (1+PeerCount()) >= max {
-			http.Error(w, "max nodes reached", http.StatusForbidden)
-			return
-		}
+	s.admissionMu.Lock()
+	defer s.admissionMu.Unlock()
+	if !s.reserveDirectPeer(addr) {
+		http.Error(w, "direct peer limit reached", http.StatusForbidden)
+		return
 	}
 	s.setPeer(addr, time.Now())
 	s.recordPeerCertificate(addr, r)
@@ -437,6 +440,45 @@ var MaxNodesAllowed func() int
 
 // PeerCount returns current peer count.
 var PeerCount func() int
+
+// PeerConfigured reports whether this address is among the currently selected
+// direct peers. A Community downgrade retains, but does not connect, extras.
+var PeerConfigured func(peer string) bool
+
+// reserveDirectPeer serializes admission with the caller's onPeer callback.
+// An active slot is reserved before the configured peer list is updated.
+func (s *Server) reserveDirectPeer(peer string) bool {
+	max := 0
+	if MaxNodesAllowed != nil {
+		max = MaxNodesAllowed()
+	}
+	if max <= 0 {
+		return true
+	}
+	p := normalizePeer(peer)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if PeerConfigured != nil && PeerConfigured(p) {
+		return true
+	}
+	configured := 0
+	if PeerCount != nil {
+		configured = PeerCount()
+	}
+	// After a downgrade, a previously active extra peer must not retain a
+	// slot merely because it remains in memory.
+	if configured >= max-1 {
+		return false
+	}
+	if _, active := s.peers[p]; !active && len(s.peers) >= max-1 {
+		return false
+	}
+	if s.peers == nil {
+		s.peers = make(map[string]time.Time)
+	}
+	s.peers[p] = time.Now()
+	return true
+}
 
 // SharingEnabled reports whether trusted network participation is active.
 var SharingEnabled func() bool
@@ -485,6 +527,12 @@ func (s *Server) handleHeartbeat(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		addr := normalizeAddrFromReq(req.Addr, r.RemoteAddr)
+		s.admissionMu.Lock()
+		defer s.admissionMu.Unlock()
+		if !s.reserveDirectPeer(addr) {
+			http.Error(w, "direct peer limit reached", http.StatusForbidden)
+			return
+		}
 		now := time.Now()
 		s.setPeer(addr, now)
 		s.recordPeerCertificate(addr, r)
@@ -742,6 +790,9 @@ func (s *Server) heartbeatLoop(peer string) {
 	for range ticker.C {
 		if SharingEnabled != nil && !SharingEnabled() {
 			continue
+		}
+		if MaxNodesAllowed != nil && MaxNodesAllowed() > 0 && PeerConfigured != nil && !PeerConfigured(peer) {
+			return
 		}
 		payload := map[string]interface{}{
 			"addr":       s.selfAddr(),
