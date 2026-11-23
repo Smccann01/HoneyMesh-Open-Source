@@ -1,7 +1,7 @@
 # HoneyMesh Operator Manual
 
-Date: 2026-11-18
-Version: v2.3.6-rc4-corefirewall4 pilot
+Date: 2026-11-23
+Version: v2.3.7-rc2-community5 pilot
 
 This manual covers the HoneyMesh operator workflow for local protection, self-hosted Exchange connectivity, trusted mesh discovery, per-network trust, temporary join tokens, and day-to-day administration. The software is free and does not require a commercial license key.
 
@@ -60,12 +60,12 @@ GOTOOLCHAIN=go1.26.10 go build -o honeymesh .
 
 The source build creates a local binary. The service commands below apply after package installation.
 
-Install the Ubuntu 24.04 AMD64 pilot package after downloading it with `SHA256SUMS` from the [RC6 pilot release](https://github.com/Smccann01/HoneyMesh-Open-Source/releases/tag/v2.3.6-rc6-pilot.1). This candidate is for noncritical hosts with console recovery access; [release readiness](../../RELEASE_READINESS.md) lists the remaining qualification work. RC4 has a peer-revocation defect and must not be used for trusted-network sharing.
+Install the Ubuntu 24.04 AMD64 pilot package after downloading it with `SHA256SUMS` from the [Node Pro RC2 Community release](https://github.com/Smccann01/HoneyMesh-Open-Source/releases/tag/node-pro-v2.3.7-rc2-community5-pilot.1). This candidate is for noncritical hosts with console recovery access; [release readiness](../../RELEASE_READINESS.md) lists the remaining qualification work. The retired RC4 host package had a peer-revocation defect and must not be used for trusted-network sharing.
 
 ```bash
 sha256sum -c SHA256SUMS
-gh attestation verify honeymesh_2.3.6-rc6-corefirewall4_amd64.deb -R Smccann01/HoneyMesh-Open-Source
-sudo dpkg -i ./honeymesh_2.3.6-rc6-corefirewall4_amd64.deb
+gh attestation verify honeymesh_2.3.7-rc2-community5_amd64.deb -R Smccann01/HoneyMesh-Open-Source --source-digest 9df2782f86555ab3d063465726a3cc86d4762244
+sudo dpkg -i ./honeymesh_2.3.7-rc2-community5_amd64.deb
 ```
 
 The package installs a Community configuration bound to `127.0.0.1`, with no interfaces or traps selected and sharing disabled. On a systemd host, a fresh install starts the service. Edit `/etc/honeymesh/honeymesh.json` to choose the interfaces and traps you intend to protect, then run `sudo systemctl restart honeymesh.service`; the service detects the operator config change and applies those selections. The configuration is root-owned and readable by the `honeymesh` service group. The first start saves a unique admin token in `/var/lib/honeymesh/runtime-state.json`. The installer generates local TLS certificates per machine; for remote dashboard access or trusted mesh, configure certificates and CA trust for the actual network names and addresses. Never copy another node's private key or live configuration into an installation package.

@@ -1,6 +1,6 @@
 # Firewall Console beta.9 free pilot
 
-This bundle installs the local Firewall Console in **read-only host mode by default** on one noncritical Ubuntu 24.04 AMD64 host. It requires a separately installed, matching HoneyMesh Core RC6 pilot agent, Node.js 20 or newer at `/usr/bin/node`, npm, and HTTPS access to the npm registry for pinned dependencies. It does not enroll a managed Exchange account. Keep an independent provider-console recovery route.
+This is a historical beta.9 install record. The local Firewall Console installed in **read-only host mode by default** on one noncritical Ubuntu 24.04 AMD64 host beside the now-retired HoneyMesh Core RC6 pilot agent. It also required Node.js 20 or newer at `/usr/bin/node`, npm, and HTTPS access to the npm registry for pinned dependencies. It did not enroll a managed Exchange account. Keep an independent provider-console recovery route for any future evaluation.
 
 Download this bundle and its `SHA256SUMS` from the same release. Verify both the checksum and the public GitHub artifact attestation before extracting:
 
@@ -11,7 +11,9 @@ mkdir firewall-pilot
 tar -xzf network-decode-firewall-console-0.2.1-beta.9-free-pilot.tar.gz -C firewall-pilot
 ```
 
-Install and start the [Core RC6 pilot](https://github.com/Smccann01/HoneyMesh-Open-Source/releases/tag/v2.3.6-rc6-pilot.1) first. Keep it in TEST with no protected interface. Confirm the agent's local certificate exists at `/etc/honeymesh/certs/node/node.crt` and its loopback health endpoint responds. Then install this console:
+This is a historical Console beta.9 install record. Its host integration was tested with the retired Core RC6 package, which is no longer offered for download. Compatibility with the current [Core RC7 Community pilot](https://github.com/Smccann01/HoneyMesh-Open-Source/releases/tag/v2.3.6-rc7-community5-pilot.1) has not been qualified. Do not enable Console host actions on RC7 until a version-matched compatibility and recovery test is published. The commands below document the tested RC6 setup; they are not a current RC7 installation path.
+
+In the original RC6 test, the operator kept Core in TEST with no protected interface, confirmed the agent's local certificate at `/etc/honeymesh/certs/node/node.crt`, and checked its loopback health endpoint before installing this console:
 
 ```sh
 sudo sh firewall-pilot/network-decode-firewall-console-0.2.1-beta.9/install-console.sh firewall-pilot/network-decode-firewall-console-0.2.1-beta.9
