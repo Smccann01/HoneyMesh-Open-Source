@@ -121,7 +121,7 @@ fail() {
 }
 
 KVER=$(uname -r | awk -F- '{print $1}')
-REQ="5.8.0"
+REQ="5.9.0"
 
 ver_ge() {
   [ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" = "$2" ]
@@ -223,8 +223,8 @@ if [[ "\${EUID}" -ne 0 ]]; then
 fi
 
 KVER=\$(uname -r | awk -F- '{print \$1}')
-if [[ "\$(printf '%s\n' "\$KVER" '5.8.0' | sort -V | head -n1)" != '5.8.0' ]]; then
-  echo "Kernel \$KVER is too old. Require >= 5.8.0 for CAP_BPF and CAP_PERFMON." >&2
+if [[ "\$(printf '%s\n' "\$KVER" '5.9.0' | sort -V | head -n1)" != '5.9.0' ]]; then
+  echo "Kernel \$KVER is too old. Require >= 5.9.0 for XDP BPF-link attachment." >&2
   exit 1
 fi
 
@@ -275,7 +275,7 @@ fail() {
 }
 
 KVER=$(uname -r | awk -F- '{print $1}')
-REQ="5.8.0"
+REQ="5.9.0"
 
 ver_ge() {
   [ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" = "$2" ]
