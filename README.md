@@ -9,7 +9,7 @@ HoneyMesh provides defensive tools for existing servers. This public repository 
 | `exchange/` | Self-hosted Exchange | AGPL-3.0-only |
 | `firewall-console/` | Local Firewall Console | Apache-2.0 |
 
-Local administrators generate their own credentials. Self-hosted Exchange enrollment uses admin-issued, one-use tokens. Community observations require explicit opt-in, and receiving hosts decide enforcement locally. Direct mesh requires an operator-configured cluster identity and mutual TLS trust. The official Community Core and Node agent builds support **up to five direct peers per node** (the local node plus five others); the customer-operated Community Exchange remains free and has no Network Decode subscription or five-node limit. This is a feature limit in these builds, not an additional restriction on the open-source licenses or their existing recipients.
+Local administrators generate their own credentials. Self-hosted Exchange enrollment uses admin-issued, one-use tokens. Community observations require explicit opt-in, and receiving hosts decide enforcement locally. Direct mesh requires an operator-configured cluster identity and mutual TLS trust. Core and Node agent builds from this source revision support **up to five direct peers per node** (the local node plus five others); published pilot packages may predate this limit, so check their release notes. The customer-operated Community Exchange remains free and has no Network Decode subscription or five-node limit. This is a feature limit in these builds, not an additional restriction on the open-source licenses or their existing recipients.
 
 ## Ubuntu App Center beta
 

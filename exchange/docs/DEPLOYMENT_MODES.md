@@ -4,14 +4,14 @@ This page describes the current product boundary. An Exchange is a service that 
 
 | Path | Current access | Operator control | Status |
 |---|---|---|---|
-| Free HoneyMesh Core pilot and direct mesh | No Network Decode subscription; official Community agent builds support five direct peers per node | Each operator configures local identity, trusted peers, sharing, and enforcement | Available for bounded, noncritical evaluation |
+| Free HoneyMesh Core pilot and direct mesh | No Network Decode subscription; Community agents built from this source revision support five direct peers per node | Each operator configures local identity, trusted peers, sharing, and enforcement | Available for bounded, noncritical evaluation |
 | Customer-operated Exchange | Free AGPL-3.0-only Exchange source; no Network Decode subscription | Customer runs the service, database, administrators, enrollment, and sharing policy | Available as source; production installer and recovery qualification remain open |
 | Network Decode hosted Exchange | Separate $5 USD per enrolled node per month, in addition to the current $45 HoneyMesh 2.0 node package | Subscriber chooses whether to publish, receive, and act locally | Hosted subscription checkout is being prepared; see the [current offer](https://network-decode.com/products/honeymesh-exchange) |
 | Private Exchange to hosted Exchange federation | Would need separate authorization and a hosted entitlement for each node consuming commercial intelligence | Customer must explicitly approve what crosses the boundary | Planned; no supported federation gateway today |
 
 ## Customer-operated Exchange
 
-The administrator creates credentials locally, issues a short-lived one-use enrollment token, and enrolls nodes at that Exchange's own HTTPS origin. No hosted billing account, Network Decode license server, or `honeymesh.io` connection is required for this path. The five-peer Community build limit applies to direct node-to-node mesh connections, not enrollment in a self-hosted Exchange. Sharing and discovery start off. Receiving nodes keep their own policy and may treat observations as review-only. See [machine API v1](MACHINE_API_V1.md) and the [Exchange setup](../README.md).
+The administrator creates credentials locally, issues a short-lived one-use enrollment token, and enrolls nodes at that Exchange's own HTTPS origin. No hosted billing account, Network Decode license server, or `honeymesh.io` connection is required for this path. The five-peer limit in Community agents built from this source revision applies to direct node-to-node mesh connections, not enrollment in a self-hosted Exchange; published pilot packages may predate the limit. Sharing and discovery start off. Receiving nodes keep their own policy and may treat observations as review-only. See [machine API v1](MACHINE_API_V1.md) and the [Exchange setup](../README.md).
 
 ## Hosted Exchange
 
