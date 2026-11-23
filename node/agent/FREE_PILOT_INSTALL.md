@@ -6,7 +6,10 @@ Download the AMD64 `.deb` and `SHA256SUMS` from the same release. Check both the
 
 ```sh
 sha256sum -c SHA256SUMS
-gh attestation verify honeymesh_2.3.7-rc2-community5_amd64.deb -R Smccann01/HoneyMesh-Open-Source
+gh attestation verify honeymesh_2.3.7-rc2-community5_amd64.deb \
+  -R Smccann01/HoneyMesh-Open-Source \
+  --signer-workflow Smccann01/HoneyMesh-Open-Source/.github/workflows/attest-node-pro-pilot.yml \
+  --source-digest 9df2782f86555ab3d063465726a3cc86d4762244
 ```
 
 Keep provider-console access and a copy of the exact package currently installed, such as Core RC6 or Node Pro RC1. Back up `/etc/honeymesh` and `/var/lib/honeymesh` privately before upgrading. The archive includes local certificates and administrator credentials; keep it readable only by root.
