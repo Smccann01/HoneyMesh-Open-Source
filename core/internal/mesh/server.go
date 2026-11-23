@@ -302,6 +302,8 @@ func (s *Server) RemovePeer(peer string) {
 	s.mu.Lock()
 	delete(s.peers, p)
 	delete(s.peersKnown, p)
+	delete(s.stats, p)
+	delete(s.caps, p)
 	delete(s.peerCerts, p)
 	s.mu.Unlock()
 }
@@ -319,6 +321,8 @@ func (s *Server) RevokePeer(peer string) (string, bool) {
 	s.revokedCerts[fingerprint] = struct{}{}
 	delete(s.peers, p)
 	delete(s.peersKnown, p)
+	delete(s.stats, p)
+	delete(s.caps, p)
 	delete(s.peerCerts, p)
 	return fingerprint, true
 }
