@@ -1,7 +1,7 @@
 name: network-decode-node
 title: HoneyMesh Node Kernel Pilot
 base: core24
-version: '2.3.7-rc1-nodepro1'
+version: '2.3.7-rc2-community5'
 summary: Developer pilot for HoneyMesh Node host protection
 description: |
   Developer-only Node agent Snap candidate. It needs host eBPF/XDP access and is
