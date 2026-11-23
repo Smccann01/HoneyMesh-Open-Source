@@ -1,7 +1,7 @@
 name: network-decode-core
 title: HoneyMesh Core Kernel Pilot
 base: core24
-version: '2.3.6-rc6-corefirewall4+s1'
+version: '2.3.6-rc7-community5+s1'
 summary: Developer pilot for HoneyMesh Core host protection
 description: |
   Developer-only Core Snap candidate. It needs host eBPF/XDP access and is
