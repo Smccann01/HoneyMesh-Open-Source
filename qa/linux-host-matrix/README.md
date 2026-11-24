@@ -4,7 +4,7 @@ The website's Linux selector is a discovery catalog. A distribution row becomes 
 
 ## Automated first batch
 
-The `Qualify published host DEBs on Ubuntu VMs` workflow runs six combinations: Core RC7 and Node Pro RC2 on GitHub-hosted Ubuntu 22.04, 24.04, and 26.04 AMD64 virtual machines. It downloads each **published** DEB and checksum manifest, verifies the release attestation, installs the package, and records the actual `uname -r`. These standard runners are separate VMs and [free for public repositories](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
+The `Qualify published host DEBs on Ubuntu VMs` workflow runs six combinations: Core RC8 and Node Pro RC3 on GitHub-hosted Ubuntu 22.04, 24.04, and 26.04 AMD64 virtual machines. It downloads each **published** DEB and checksum manifest, verifies the release attestation, installs the package, and records the actual `uname -r`. These standard runners are separate VMs and [free for public repositories](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
 
 The active test refuses an existing HoneyMesh installation and requires an explicit disposable-host marker. It uses a private veth and network namespace, not the VM's management interface. Each job checks:
 
@@ -17,7 +17,9 @@ The active test refuses an existing HoneyMesh installation and requires an expli
 
 Every job uploads a JSON report containing the product tag, package SHA-256, actual OS/kernel/architecture, checks, and failure reason. It never uploads the administrator token, node key, or local configuration. A passing job is a **scoped VM pilot result**, not a native-NIC, throughput, long-running reliability, or production certification. Node Pro's application bridge is outside this first packet-path test.
 
-The same isolated host probe also passed a [Debian 12 and 13 AWS VM batch](results/2026-11-24-debian-aws.md) for the two published host packages. Those results are tied to the pinned AMIs and exact cloud kernels in that record.
+The first batch passed all six combinations on 2026-11-23. The [release-specific result record](results/2026-11-23-ubuntu-rc8-rc3.md) identifies the exact published packages, kernels, and checks.
+
+The same isolated host probe passed a [Debian 12 and 13 AWS VM batch](results/2026-11-24-debian-aws.md) for the **earlier** Core RC7 and Node Pro RC2 packages. Those results are tied to the pinned AMIs, exact cloud kernels, and historical package hashes in that record; they do not qualify the newly published RC8/RC3 DEBs.
 
 For a read-only inventory on any Linux host:
 
@@ -27,7 +29,7 @@ python3 .github/scripts/qualify-host-deb.py --inventory-only
 
 ## Remaining distribution and product work
 
-The public Core RC7 and Node Pro RC2 releases currently provide AMD64 DEBs. This first batch can test the existing download on Ubuntu; it cannot qualify an RPM distribution, ARM64 installation, or the private HoneyMesh 2.0 package from those assets.
+The public Core RC8 and Node Pro RC3 releases currently provide AMD64 DEBs. This first batch can test those exact downloads on Ubuntu; it cannot qualify an RPM distribution, ARM64 installation, or the private HoneyMesh 2.0 package from those assets.
 
 For Debian, RHEL-family, Amazon Linux, SUSE, and other Linux entries, boot a vendor-published, pinned VM image for each OS version and architecture. Use a short-lived test instance with no inbound management port, Systems Manager access, an encrypted root volume, IMDSv2, a fixed termination deadline, and an exact package or source revision. Record AMI ID and owner as well as the kernel and NIC driver. [Systems Manager Run Command](https://docs.aws.amazon.com/systems-manager/latest/userguide/run-command.html) can run the same probe and collect its report without SSH. Estimate and approve the instance and image cost before launching a paid matrix.
 
