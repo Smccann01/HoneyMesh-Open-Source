@@ -173,23 +173,28 @@ def qualify(core_deb, console_bundle, report_path):
                   "Core XDP drop counter did not rise")
             checks["console_grant_selected_source_drop_control_pass"] = True
 
-            stage = "release_and_recover"
+            stage = "release_grant"
             status, released, _ = console("POST", "/api/host/release", {
                 "ip": HOST["BLOCKED_IP"], "grant_id": created["grant_id"],
             }, cookie)
             check(status == 200 and released.get("grant_removed") is True and
                   released.get("kernel_reconciled") is True, "Console scoped release failed")
             check(HOST["wait_ping"](HOST["BLOCKED_IP"], True), "traffic did not recover after Console release")
+            stage = "return_to_test"
             status, returned, _ = console("POST", "/api/host/test-mode", {"confirm": "RETURN TO TEST"}, cookie)
             check(status == 200 and returned.get("mode") == "TEST", "Console did not return Core to TEST")
+            stage = "disable_controls"
             run("sh", str(bundle / "disable-host-actions.sh"), timeout=90)
             actions_enabled = False
+            ready_console()
+            stage = "confirm_read_only"
             status, _, _ = console("POST", "/api/host/ban", {
                 "ip": HOST["BLOCKED_IP"], "ttl_seconds": 60,
             }, cookie)
             check(status == 503, "Console write path stayed open after disable")
             checks["scoped_release_test_recovery_and_write_disable"] = True
 
+            stage = "restore_core_defaults"
             HOST["CONFIG"].write_bytes(original_config)
             original_config = None
             run("systemctl", "restart", "honeymesh.service")
@@ -198,6 +203,7 @@ def qualify(core_deb, console_bundle, report_path):
             check(hashlib.sha256(HOST["NODE_KEY"].read_bytes()).digest() == node_key_hash and
                   hashlib.sha256(token.encode()).digest() == token_hash, "Core identity changed after restart")
             checks["core_identity_preserved_and_xdp_detached"] = True
+            stage = "remove_console"
             run("sh", str(bundle / "uninstall-console.sh"), str(bundle), timeout=90)
             console_installed = False
             checks["console_removed"] = True
