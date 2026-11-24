@@ -13,13 +13,18 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
       - name: Prepare disposable host
         run: |
           set -euo pipefail
+          sudo install -m 0755 "$(command -v node)" /usr/bin/node
+          sudo ln -sfn "$(command -v npm)" /usr/bin/npm
+          /usr/bin/node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 20 ? 0 : 1)'
+          /usr/bin/npm --version
           sudo apt-get update
           sudo apt-get install -y iproute2 ripgrep
-          test -x /usr/bin/node
-          /usr/bin/node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 20 ? 0 : 1)'
           printf '%s\n' "$GITHUB_RUN_ID" | sudo tee /run/honeymesh-qualification-disposable >/dev/null
       - name: Download and verify exact published bundles
         env:
@@ -38,7 +43,7 @@ jobs:
       - name: Test account, opt-in, exact block, release, and cleanup
         run: |
           set -euo pipefail
-          sudo python3 qa/console-pairing/qualify.py \
+          sudo env PATH=/usr/bin:/bin python3 qa/console-pairing/qualify.py \
             --core-deb "$RUNNER_TEMP/pairing/core/honeymesh_2.3.6-rc8-community5_amd64.deb" \
             --console-bundle "$RUNNER_TEMP/pairing/console/network-decode-firewall-console-0.2.1-beta.9-free-pilot.tar.gz" \
             --report "$RUNNER_TEMP/pairing/report.json"
