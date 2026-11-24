@@ -27,7 +27,7 @@ The Community Node agent build from this source revision supports up to five dir
 
 Runtime requirements:
 
-- Linux kernel 5.8 or newer (required for the service's `CAP_BPF` and `CAP_PERFMON` capabilities).
+- Linux kernel 5.9 or newer for the current XDP BPF-link attachment path. `CAP_BPF` and `CAP_PERFMON` arrived in 5.8, but those capabilities alone are insufficient for this attachment API. The previously published Node Pro installer checks only for 5.8; passing that check on upstream 5.8 does not establish XDP protection. A mounted BPF filesystem and host-specific XDP checks are also required.
 - Root privileges for installation; the packaged service runs as the dedicated `honeymesh` user with bounded BPF/network capabilities.
 - HTTPS certificates for the dashboard/API if you run outside a lab.
 - OpenSSL for package installation; the installer creates a unique local CA and node certificate.

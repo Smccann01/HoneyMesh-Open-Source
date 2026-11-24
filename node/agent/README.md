@@ -4,7 +4,7 @@ This is the verified HoneyMesh 2.3.6-rc2 Iron Hive agent source with the local H
 
 The baseline rc2 package fixes the federation trust-lock deadlock. Keep license generation in its separate private workflow.
 
-The packaged daemon runs as the dedicated `honeymesh` system user through `systemd`. Linux kernel 5.8 or newer is required for its bounded BPF capabilities. Read [MANUAL.md](MANUAL.md) for installation, migration, service handover, and rollback instructions.
+The packaged daemon runs as the dedicated `honeymesh` system user through `systemd`. The current XDP BPF-link attachment path needs upstream Linux 5.9 or newer; a mounted BPF filesystem and host qualification are still required. Read [MANUAL.md](MANUAL.md) for installation, migration, service handover, and rollback instructions.
 
 ## Build and verify
 
