@@ -17,6 +17,8 @@ The active test refuses an existing HoneyMesh installation and requires an expli
 
 Every job uploads a JSON report containing the product tag, package SHA-256, actual OS/kernel/architecture, checks, and failure reason. It never uploads the administrator token, node key, or local configuration. A passing job is a **scoped VM pilot result**, not a native-NIC, throughput, long-running reliability, or production certification. Node Pro's application bridge is outside this first packet-path test.
 
+The same isolated host probe also passed a [Debian 12 and 13 AWS VM batch](results/2026-11-24-debian-aws.md) for the two published host packages. Those results are tied to the pinned AMIs and exact cloud kernels in that record.
+
 For a read-only inventory on any Linux host:
 
 ```bash
