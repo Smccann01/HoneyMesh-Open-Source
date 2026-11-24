@@ -102,7 +102,7 @@ jobs:
           SNAP_NAME: ${{ matrix.snap_name }}
         run: |
           set -eu
-          test "$(sudo snap run "$SNAP_NAME" -version)" = 'v2.3.6-rc7-community5+s1'
+          test "$(sudo snap run "$SNAP_NAME" -version)" = 'v2.3.6-rc8-community5+s1'
           python3 -m http.server 9000 --bind 127.0.0.1 > port-listener.log 2>&1 &
           listener_pid=$!
           trap 'kill "$listener_pid" 2>/dev/null || true' EXIT
