@@ -43,7 +43,7 @@ jobs:
       - name: Test account, opt-in, exact block, release, and cleanup
         run: |
           set -euo pipefail
-          sudo env PATH=/usr/bin:/bin python3 qa/console-pairing/qualify.py \
+          sudo env PATH=/usr/bin:/usr/sbin:/bin:/sbin python3 qa/console-pairing/qualify.py \
             --core-deb "$RUNNER_TEMP/pairing/core/honeymesh_2.3.6-rc8-community5_amd64.deb" \
             --console-bundle "$RUNNER_TEMP/pairing/console/network-decode-firewall-console-0.2.1-beta.9-free-pilot.tar.gz" \
             --report "$RUNNER_TEMP/pairing/report.json"
