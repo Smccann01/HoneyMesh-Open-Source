@@ -11,7 +11,7 @@ mkdir firewall-pilot
 tar -xzf network-decode-firewall-console-0.2.1-beta.9-free-pilot.tar.gz -C firewall-pilot
 ```
 
-This is a historical Console beta.9 install record. Its host integration was tested with the retired Core RC6 package, which is no longer offered for download. Compatibility with the current [Core RC7 Community pilot](https://github.com/Smccann01/HoneyMesh-Open-Source/releases/tag/v2.3.6-rc7-community5-pilot.1) has not been qualified. Do not enable Console host actions on RC7 until a version-matched compatibility and recovery test is published. The commands below document the tested RC6 setup; they are not a current RC7 installation path.
+This is a historical Console beta.9 install record. Its host integration was tested with the retired Core RC6 package, which is no longer offered for download. Compatibility with the current [Core RC8 Community pilot](https://github.com/Smccann01/HoneyMesh-Open-Source/releases/tag/v2.3.6-rc8-community5-pilot.1) is being tested separately. Do not enable Console host actions on RC8 until a version-matched compatibility and recovery result is published. The commands below document the tested RC6 setup; they are not a current RC8 installation path.
 
 In the original RC6 test, the operator kept Core in TEST with no protected interface, confirmed the agent's local certificate at `/etc/honeymesh/certs/node/node.crt`, and checked its loopback health endpoint before installing this console:
 

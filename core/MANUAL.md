@@ -26,7 +26,7 @@ The Community Core build from this source revision supports up to five directly 
 
 Runtime requirements:
 
-- Linux kernel 5.9 or newer for the current XDP BPF-link attachment path. `CAP_BPF` and `CAP_PERFMON` arrived in 5.8, but those capabilities alone are insufficient for this attachment API. The previously published RC7 installer checks only for 5.8; passing that check on upstream 5.8 does not establish XDP protection. A mounted BPF filesystem and host-specific XDP checks are also required.
+- Linux kernel 5.9 or newer for the current XDP BPF-link attachment path. `CAP_BPF` and `CAP_PERFMON` arrived in 5.8, but those capabilities alone are insufficient for this attachment API. The RC8 installer checks for 5.9, but a version check alone does not prove that XDP can attach to the selected interface. The historical RC7 installer checked only for 5.8. A mounted BPF filesystem and host-specific XDP checks are also required.
 - Root privileges for installation; the packaged service runs as the dedicated `honeymesh` user with bounded BPF/network capabilities.
 - HTTPS certificates for the dashboard/API if you run outside a lab.
 - OpenSSL for package installation; the installer creates a unique local CA and node certificate.
@@ -66,7 +66,7 @@ sudo systemctl start honeymesh.service
 Install the current Debian package:
 
 ```bash
-sudo dpkg -i /path/to/honeymesh_2.3.6-rc7-community5_amd64.deb
+sudo dpkg -i /path/to/honeymesh_2.3.6-rc8-community5_amd64.deb
 ```
 
 The package installs a Community configuration bound to `127.0.0.1`, with no interfaces or traps selected and sharing disabled. On a systemd host, a fresh install starts the service. Edit `/etc/honeymesh/honeymesh.json` to choose the interfaces and traps you intend to protect, then run `sudo systemctl restart honeymesh.service`; the service detects the operator config change and applies those selections. The configuration is root-owned and readable by the `honeymesh` service group. The first start saves a unique admin token in `/var/lib/honeymesh/runtime-state.json`. The installer generates local TLS certificates per machine; for remote dashboard access or trusted mesh, configure certificates and CA trust for the actual network names and addresses. Never copy another node's private key or live configuration into an installation package.
