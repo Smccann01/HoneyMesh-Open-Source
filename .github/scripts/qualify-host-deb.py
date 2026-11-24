@@ -141,7 +141,7 @@ def qualify(package: Path, report_path: Path, release_tag: str) -> int:
         "checks": {},
         "result": "failed",
         "limitations": [
-            "Disposable GitHub-hosted VM only; no production qualification.",
+            "Disposable VM only; no production qualification.",
             "Generic XDP on an isolated veth; native NIC and throughput were not tested.",
             "One exact source was blocked; a control source remained reachable.",
         ],
