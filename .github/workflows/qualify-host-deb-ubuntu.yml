@@ -1,0 +1,62 @@
+name: Qualify published host DEBs on Ubuntu VMs
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/qualify-host-deb-ubuntu.yml'
+      - '.github/scripts/qualify-host-deb.py'
+      - 'qa/linux-host-matrix/**'
+
+permissions:
+  contents: read
+  attestations: read
+
+jobs:
+  qualify:
+    name: ${{ matrix.release }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { release: core-rc7, os: ubuntu-22.04, tag: v2.3.6-rc7-community5-pilot.1, package: honeymesh_2.3.6-rc7-community5_amd64.deb }
+          - { release: core-rc7, os: ubuntu-24.04, tag: v2.3.6-rc7-community5-pilot.1, package: honeymesh_2.3.6-rc7-community5_amd64.deb }
+          - { release: core-rc7, os: ubuntu-26.04, tag: v2.3.6-rc7-community5-pilot.1, package: honeymesh_2.3.6-rc7-community5_amd64.deb }
+          - { release: node-pro-rc2, os: ubuntu-22.04, tag: node-pro-v2.3.7-rc2-community5-pilot.1, package: honeymesh_2.3.7-rc2-community5_amd64.deb }
+          - { release: node-pro-rc2, os: ubuntu-24.04, tag: node-pro-v2.3.7-rc2-community5-pilot.1, package: honeymesh_2.3.7-rc2-community5_amd64.deb }
+          - { release: node-pro-rc2, os: ubuntu-26.04, tag: node-pro-v2.3.7-rc2-community5-pilot.1, package: honeymesh_2.3.7-rc2-community5_amd64.deb }
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Download exact published package
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ matrix.tag }}
+          PACKAGE: ${{ matrix.package }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/hm-qualification"
+          cd "$RUNNER_TEMP/hm-qualification"
+          gh release download "$RELEASE_TAG" -R "$GITHUB_REPOSITORY" -p "$PACKAGE" -p SHA256SUMS
+          sha256sum -c SHA256SUMS
+          gh attestation verify "$PACKAGE" -R "$GITHUB_REPOSITORY"
+      - name: Install and probe on isolated veth
+        env:
+          RELEASE_TAG: ${{ matrix.tag }}
+          PACKAGE: ${{ matrix.package }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$GITHUB_RUN_ID" | sudo tee /run/honeymesh-qualification-disposable >/dev/null
+          sudo python3 .github/scripts/qualify-host-deb.py \
+            --package "$RUNNER_TEMP/hm-qualification/$PACKAGE" \
+            --release-tag "$RELEASE_TAG" \
+            --report "$RUNNER_TEMP/hm-qualification/report.json"
+      - name: Preserve per-host evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: host-qualification-${{ matrix.release }}-${{ matrix.os }}
+          path: ${{ runner.temp }}/hm-qualification/report.json
+          if-no-files-found: warn
+          retention-days: 14
