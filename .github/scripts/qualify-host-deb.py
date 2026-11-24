@@ -109,9 +109,10 @@ def wait_ping(source: str, expected: bool) -> bool:
     return False
 
 
-def xdp_attached() -> bool:
+def xdp_state() -> tuple[bool, bool]:
     result = run("ip", "-details", "link", "show", HOST_IF, check=False)
-    return result.returncode == 0 and "prog/xdp" in result.stdout
+    attached = result.returncode == 0 and "prog/xdp" in result.stdout
+    return attached, attached and "xdpgeneric" in result.stdout
 
 
 def create_isolated_network() -> None:
@@ -193,7 +194,7 @@ def qualify(package: Path, report_path: Path, release_tag: str) -> int:
         run("systemctl", "restart", "honeymesh.service")
         token = ready_token()
         for _ in range(20):
-            if xdp_attached():
+            if xdp_state()[1]:
                 break
             time.sleep(0.5)
         else:
@@ -228,7 +229,7 @@ def qualify(package: Path, report_path: Path, release_tag: str) -> int:
         original_config = None
         run("systemctl", "restart", "honeymesh.service")
         token = ready_token()
-        require(not xdp_attached(), "XDP remained attached after config restore")
+        require(not xdp_state()[0], "XDP remained attached after config restore")
         require(hashlib.sha256(NODE_KEY.read_bytes()).digest() == private_key_before,
                 "node key changed after restart")
         require(hashlib.sha256(token.encode()).digest() == state_token_before,
