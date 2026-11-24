@@ -27,7 +27,7 @@ import (
 	"honeymesh/internal/mesh"
 )
 
-const Version = "v2.3.7-rc2-community5"
+const Version = "v2.3.7-rc3-community5"
 
 var meshPeersMu sync.RWMutex
 
